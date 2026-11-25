@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lamb Chomp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one-screen column. Title bar, score strip, a fenced paddock that takes all spare height, hint, controls, field picker. */
+:root{
+  color-scheme: dark;
+  --page:#12342c;        /* spruce hillside behind the paddock */
+  --page-deep:#0c2620;
+  --wool:#f6f1e4;        /* text and sheep */
+  --wool-dim:#b9c9bf;
+  --butter:#f4c542;      /* the one accent: selection, stars, primary action */
+  --ink:#23211f;
+  --fence:#7a5230;
+  --grass:#6fbd4b; --grass-alt:#66b344; --grass-ink:#3f8f2f;
+  --tall:#2f8a3a;  --tall-alt:#2b8236;
+  --soil:#bb8d5c;  --soil-alt:#b38455;  --soil-ink:#94683e;
+  --mud:#5a3b28;   --rock:#929a9e;      --petal:#f58aae;
+  --display:"Bowlby One","Arial Black",Impact,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--page);color:var(--wool);font-family:var(--body);font-size:16px;line-height:1.35;
+  background-image:radial-gradient(120% 60% at 50% 0%,#1b473c 0%,var(--page) 55%,var(--page-deep) 100%);
+  -webkit-tap-highlight-color:transparent;overflow:auto}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+button:focus-visible{outline:3px solid var(--butter);outline-offset:2px}
+
+.app{height:100%;min-height:540px;max-width:520px;margin:0 auto;padding:14px 16px 16px;display:flex;flex-direction:column;gap:10px}
+
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-weight:400;font-size:34px;line-height:.9;letter-spacing:-.01em;color:var(--butter);
+  transform:rotate(-2deg);transform-origin:left bottom;text-shadow:0 3px 0 var(--page-deep)}
+h1 span{color:var(--wool)}
+.field{font-weight:700;font-size:14px;color:var(--wool-dim);text-transform:uppercase;letter-spacing:.08em;padding-bottom:2px}
+
+.strip{display:flex;align-items:center;gap:18px;font-variant-numeric:tabular-nums}
+.stat{display:flex;align-items:baseline;gap:6px}
+.stat b{font-family:var(--display);font-weight:400;font-size:24px;line-height:1}
+.stat small{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--wool-dim);font-weight:700}
+.stars{margin-left:auto;font-size:22px;letter-spacing:2px;color:#2c5a4d}
+.stars .on{color:var(--butter)}
+
+.wrap{flex:1;min-height:260px;position:relative;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;-webkit-user-select:none}
+.board{--cell:56px;position:relative;display:grid;grid-template-columns:repeat(var(--cols),var(--cell));grid-auto-rows:var(--cell);
+  border:6px solid var(--fence);border-radius:14px;overflow:hidden;background:var(--soil);
+  box-shadow:0 0 0 2px #5c3c21,0 14px 0 -4px rgba(0,0,0,.22),0 18px 30px rgba(0,0,0,.35)}
+.tile{position:relative;background:var(--soil)}
+.tile.alt{background:var(--soil-alt)}
+.tile.grass,.tile.flower,.tile.tramp{background:var(--grass)}
+.tile.grass.alt,.tile.flower.alt,.tile.tramp.alt{background:var(--grass-alt)}
+.tile.tall{background:var(--tall)}
+.tile.tall.alt{background:var(--tall-alt)}
+.tile svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.tile.pop svg{animation:pop .22s ease-out}
+@keyframes pop{0%{transform:scale(.6);opacity:.4}100%{transform:scale(1);opacity:1}}
+
+.sheep{position:absolute;left:0;top:0;width:var(--cell);height:var(--cell);padding:0;z-index:2;transition:transform 0s linear}
+.sheep svg{width:100%;height:100%;display:block;overflow:visible}
+.sheep.left .flip{transform:scaleX(-1)}
+.flip{transform-origin:20px 20px}
+.body{transform-origin:20px 22px;transform:scale(var(--fat,1));transition:transform .25s ease-out}
+.ring{opacity:0}
+.sheep.sel.multi .ring{opacity:1}
+.sheep.sel.multi .in{animation:bob 1.1s ease-in-out infinite}
+.in{display:block;width:100%;height:100%}
+.sheep.nope .in{animation:nope .22s linear}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6%)}}
+@keyframes nope{0%,100%{transform:translateX(0)}30%{transform:translateX(-7%)}70%{transform:translateX(7%)}}
+
+.over{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;background:rgba(12,38,32,.62);border-radius:14px}
+.over.show{display:flex}
+.card{background:var(--wool);color:var(--ink);border-radius:18px;padding:20px 22px 18px;width:min(300px,86%);text-align:center;box-shadow:0 8px 0 rgba(0,0,0,.25)}
+.card h2{font-family:var(--display);font-weight:400;font-size:26px;line-height:1.05;text-wrap:balance}
+.card .big{font-size:34px;letter-spacing:4px;color:#d9d2bf;margin:6px 0 2px}
+.card .big .on{color:#e0a800}
+.card p{font-size:15px;margin:4px 0 14px}
+.card .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.btn{min-height:44px;padding:0 18px;border-radius:12px;font-weight:700;font-size:15px;background:#e6dfcc;color:var(--ink);box-shadow:0 3px 0 rgba(0,0,0,.18)}
+.btn.go{background:var(--butter)}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.18)}
+
+.hint{min-height:2.7em;font-size:15px;color:var(--wool);text-align:center;text-wrap:balance}
+.controls{display:flex;gap:10px}
+.controls .btn{flex:1;background:#1f4d41;color:var(--wool);box-shadow:0 3px 0 var(--page-deep)}
+.controls .btn:disabled{opacity:.45;cursor:default}
+.fields{display:flex;gap:6px;justify-content:space-between}
+.fields button{flex:1;max-width:48px;height:40px;border-radius:10px;font-family:var(--display);font-size:15px;background:#1a4338;color:var(--wool-dim);font-variant-numeric:tabular-nums}
+.fields button.done{background:var(--wool);color:var(--ink)}
+.fields button.ace{background:var(--butter);color:var(--ink)}
+.fields button.cur{outline:3px solid var(--butter);outline-offset:1px}
+
+@media (prefers-reduced-motion:reduce){
+  .tile.pop svg,.sheep.sel.multi .in,.sheep.nope .in{animation:none}
+  .body{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <h1>Lamb <span>Chomp</span></h1>
+    <div class="field" id="fieldLabel">Field 1 of 8</div>
+  </div>
+  <div class="strip">
+    <div class="stat"><b id="moves">0</b><small>moves</small></div>
+    <div class="stat"><b id="par">5</b><small>par</small></div>
+    <div class="stars" id="stars" aria-label="Best result on this field"></div>
+  </div>
+  <div class="wrap" id="wrap">
+    <div class="board" id="board" role="application" aria-label="Paddock. Swipe or use arrow keys to move the sheep."></div>
+    <div class="over" id="over"><div class="card" id="card"></div></div>
+  </div>
+  <p class="hint" id="hint"></p>
+  <div class="controls">
+    <button class="btn" id="undo" type="button">Undo</button>
+    <button class="btn" id="restart" type="button">Restart field</button>
+  </div>
+  <div class="fields" id="fields" aria-label="Choose a field"></div>
+</div>
+
+<script>
+// g grass, G tall grass (two passes), # rock, m mud (stops a run), f flowerbed (never trample), S sheep, . bare soil.
+// Every par is the true minimum, found by breadth-first search.
+const LEVELS=[
+ {par:5, hint:"Swipe to send the sheep running. It eats every grass tile it crosses and stops at the fence.",
+  rows:["ggggg","g##gg","g..Sg","g#..g","ggggg"]},
+ {par:8, hint:"Rocks stop a run. Use them to line up the next one.",
+  rows:["ggggg#","gggggg","g#.#.g","gSgggg","g..##g","gggggg"]},
+ {par:9, hint:"Dark, tall grass takes two passes to clear.",
+  rows:["ggggGg","g.g#Sg","g.g.Gg","g#g.gg","ggggGg","ggg###"]},
+ {par:9, hint:"Mud stops a sheep the moment it steps in.",
+  rows:[".#m.mg","#gg#gg",".gg.gg","Sggggg",".gg.gg","#ggggg"]},
+ {par:10, hint:"Never run into a flowerbed. Plan around it.",
+  rows:["gggggg","g.gf#g","g.g.#g","gggggg","g.g#gf","ggg#Sg"]},
+ {par:10, hint:"Two sheep. Tap one to choose it. They block each other.",
+  rows:[".#g.#g","#.g.gg","gggggg","g#g.gg","gSgggg","ggSgg#"]},
+ {par:12, hint:"Mud, flowers and tall grass in one field.",
+  rows:[".mSfgG","gggGgG","gg..g#","gg..g#","ggfmg.","ggggg#","g#.#.."]},
+ {par:13, hint:"Last field. Two sheep and every obstacle.",
+  rows:["gggg#g","g..m#g","g..mSG","g..gSg","G#fggf","Ggggg#","ggg#g#"]}
+];
+const DIRS={R:[1,0],L:[-1,0],D:[0,1],U:[0,-1]};
+const $=id=>document.getElementById(id);
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const STEP=reduce?0:70;
+
+let L=null;           // static level: {w,h,cells}
+let S=null;           // live state (plain JSON)
+let best={};          // field index -> stars
+let busy=false,queued=null,timers=[];
+
+function parse(i){
+  const rows=LEVELS[i].rows,h=rows.length,w=rows[0].length,cells=[],grass=[],sheep=[];
+  rows.forEach((r,y)=>[...r].forEach((c,x)=>{const p=y*w+x;
+    cells.push(c==='#'||c==='m'||c==='f'?c:'.');grass.push(c==='g'?1:c==='G'?2:0);if(c==='S')sheep.push(p)}));
+  return{L:{w,h,cells},grass,sheep};
+}
+function slide(sheep,i,d){
+  const [dx,dy]=DIRS[d];let x=sheep[i]%L.w,y=(sheep[i]/L.w)|0;const path=[];let trample=false;
+  for(;;){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=L.w||ny>=L.h)break;
+    const p=ny*L.w+nx,c=L.cells[p];
+    if(c==='#')break;if(sheep.some((s,j)=>j!==i&&s===p))break;
+    x=nx;y=ny;path.push(p);
+    if(c==='f'){trample=true;break}
+    if(c==='m')break}
+  return{path,trample};
+}
+
+/* ---------- drawing ---------- */
+function rnd(p,k){const v=Math.sin((p+1)*12.9898+(k+1)*78.233+S.li*3.71)*43758.5453;return v-Math.floor(v)}
+const f1=n=>n.toFixed(1);
+function tufts(p,n){let s='';for(let k=0;k<n;k++){const x=f1(6+rnd(p,k)*28),y=f1(13+rnd(p,k+11)*22);
+  s+=`<path d="M${x} ${y}l-2.2-5M${x} ${y}v-6.5M${x} ${y}l2.2-5"/>`}
+  return `<g stroke="var(--grass-ink)" stroke-width="1.5" stroke-linecap="round" fill="none">${s}</g>`}
+function art(type,p){
+  if(type==='grass')return tufts(p,4);
+  if(type==='tall'){let s='';for(let k=0;k<11;k++){const row=k%2,x=3+(k*3.4)+rnd(p,k)*2.5,y=row?38:27,lean=(rnd(p,k+5)-.5)*7;
+      s+=`<path d="M${f1(x)} ${y}q${f1(lean*.2)}-7 ${f1(lean)}-${f1(12+rnd(p,k+3)*3)}" stroke="${k%3?'#86d65b':'#b9ee7a'}"/>`}
+    return `<g stroke-width="2.4" stroke-linecap="round" fill="none">${s}</g>`}
+  if(type==='soil'){let s='';for(let k=0;k<4;k++)s+=`<circle cx="${f1(6+rnd(p,k)*28)}" cy="${f1(6+rnd(p,k+7)*28)}" r="${f1(.9+rnd(p,k+2))}"/>`;
+    return `<g fill="var(--soil-ink)" opacity=".7">${s}</g>`}
+  if(type==='rock')return `<ellipse cx="20" cy="32" rx="14" ry="4" fill="rgba(0,0,0,.22)"/>
+    <path d="M7 30Q4 19 12 12Q20 5 29 11Q37 18 33 30Q20 35 7 30Z" fill="var(--rock)"/>
+    <path d="M12 14Q19 8 27 12Q21 12 16 17Q12 21 11 26Q8 20 12 14Z" fill="#b9c0c3"/>
+    <path d="M22 22l4 5M17 27l3-2" stroke="#6e767a" stroke-width="1.4" stroke-linecap="round"/>`;
+  if(type==='mud')return `<ellipse cx="20" cy="21" rx="16" ry="12.5" fill="var(--mud)"/>
+    <ellipse cx="20" cy="20" rx="12" ry="8.5" fill="#6b4832"/>
+    <path d="M12 17q5-4 11-2" stroke="#9b7556" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+    <circle cx="26" cy="24" r="1.6" fill="#8a6548"/><circle cx="15" cy="25" r="1.1" fill="#8a6548"/>`;
+  if(type==='flower'||type==='tramp'){const C=[[11,12],[28,17],[16,29]];let s='';
+    C.forEach(([cx,cy],k)=>{const col=k===1?'#fff6f9':'var(--petal)';
+      if(type==='tramp'){s+=`<ellipse cx="${cx}" cy="${cy+2}" rx="6" ry="2.2" fill="${col}" opacity=".75"/>`;return}
+      for(let a=0;a<5;a++){const t=a*1.2566+k;s+=`<circle cx="${f1(cx+Math.cos(t)*3.6)}" cy="${f1(cy+Math.sin(t)*3.6)}" r="2.9" fill="${col}"/>`}
+      s+=`<circle cx="${cx}" cy="${cy}" r="2.2" fill="var(--butter)"/>`});
+    return s}
+  return '';
+}
+function tileType(p){const c=L.cells[p];
+  if(c==='#')return'rock';if(c==='m')return'mud';if(c==='f')return S.tramp===p?'tramp':'flower';
+  return S.grass[p]===2?'tall':S.grass[p]===1?'grass':'soil'}
+function paintTile(p,pop){const el=$('board').children[p],t=tileType(p),alt=((p%L.w)+((p/L.w)|0))%2?' alt':'';
+  el.className='tile '+(t==='rock'||t==='mud'?'soil':t)+alt+(pop?' pop':'');
+  el.innerHTML=`<svg viewBox="0 0 40 40" aria-hidden="true">${art(t,p)}</svg>`}
+const SHEEP=`<span class="in"><svg viewBox="0 0 40 40" aria-hidden="true">
+  <ellipse class="ring" cx="20" cy="34" rx="15" ry="5" fill="none" stroke="var(--butter)" stroke-width="2.5"/>
+  <ellipse cx="20" cy="34.5" rx="11" ry="3" fill="rgba(0,0,0,.22)"/>
+  <g class="flip">
+    <g fill="#2b2826"><rect x="11.5" y="26" width="3.2" height="8" rx="1.6"/><rect x="16" y="27" width="3.2" height="7.5" rx="1.6"/><rect x="21.5" y="27" width="3.2" height="7.5" rx="1.6"/><rect x="26" y="26" width="3.2" height="8" rx="1.6"/></g>
+    <g class="body" fill="var(--wool)"><circle cx="12" cy="21" r="7"/><circle cx="19" cy="16" r="8"/><circle cx="26" cy="20" r="7"/><circle cx="15" cy="26" r="6.5"/><circle cx="23" cy="26" r="6.5"/><circle cx="19" cy="22" r="8"/>
+      <path d="M11 20q2-3 5-2M20 14q3-1 5 1M15 27q3 2 6 0" stroke="#d9d2bf" stroke-width="1.3" fill="none" stroke-linecap="round"/></g>
+    <ellipse cx="25" cy="13.5" rx="3" ry="1.7" transform="rotate(-28 25 13.5)" fill="#2b2826"/>
+    <ellipse cx="35" cy="13.5" rx="3" ry="1.7" transform="rotate(28 35 13.5)" fill="#2b2826"/>
+    <ellipse cx="30" cy="18" rx="5.2" ry="6.4" fill="#2b2826"/>
+    <circle cx="30" cy="11.5" r="3.6" fill="var(--wool)"/>
+    <circle cx="28" cy="17" r="1.4" fill="#fff"/><circle cx="32.2" cy="17" r="1.4" fill="#fff"/>
+    <circle cx="28.3" cy="17.2" r=".7" fill="#111"/><circle cx="32.5" cy="17.2" r=".7" fill="#111"/>
+  </g></svg></span>`;
+function placeSheep(i,ms){const el=document.querySelectorAll('.sheep')[i];if(!el)return;const p=S.sheep[i];
+  el.style.transitionDuration=(ms||0)+'ms';
+  el.style.transform=`translate(calc(var(--cell)*${p%L.w}),calc(var(--cell)*${(p/L.w)|0}))`;
+  el.classList.toggle('left',S.face[i]==='L');
+  el.classList.toggle('sel',S.sel===i);
+  el.style.setProperty('--fat',(1+Math.min(1,S.fat[i]/S.share)*.2).toFixed(3))}
+function build(){
+  const b=$('board');b.style.setProperty('--cols',L.w);b.innerHTML='';
+  for(let p=0;p<L.w*L.h;p++)b.appendChild(document.createElement('div'));
+  for(let p=0;p<L.w*L.h;p++)paintTile(p);
+  S.sheep.forEach((_,i)=>{const s=document.createElement('button');s.type='button';
+    s.className='sheep'+(S.sheep.length>1?' multi':'');s.dataset.i=i;
+    s.setAttribute('aria-label',S.sheep.length>1?'Sheep '+(i+1)+'. Tap to choose.':'Sheep');
+    s.innerHTML=SHEEP;b.appendChild(s)});
+  S.sheep.forEach((_,i)=>placeSheep(i,0));
+  size();hud();
+}
+function size(){if(!L)return;const r=$('wrap').getBoundingClientRect();
+  const c=Math.max(28,Math.min(76,Math.floor(Math.min((r.width-14)/L.w,(r.height-26)/L.h))));
+  $('board').style.setProperty('--cell',c+'px')}
+function starStr(n){let s='';for(let k=0;k<3;k++)s+=`<span class="${k<n?'on':''}">★</span>`;return s}
+function hud(){
+  $('fieldLabel').textContent=`Field ${S.li+1} of ${LEVELS.length}`;
+  $('moves').textContent=S.moves;$('par').textContent=LEVELS[S.li].par;
+  $('stars').innerHTML=starStr(best[S.li]||0);
+  $('hint').textContent=LEVELS[S.li].hint;
+  $('undo').disabled=!S.hist.length;
+  const f=$('fields');f.innerHTML='';
+  LEVELS.forEach((_,i)=>{const b=document.createElement('button');b.type='button';b.textContent=i+1;
+    const st=best[i]||0;b.className=(st===3?'ace':st?'done':'')+(i===S.li?' cur':'');
+    b.setAttribute('aria-label',`Field ${i+1}${st?', '+st+' of 3 stars':''}`);
+    b.onclick=()=>load(i);f.appendChild(b)});
+  const o=$('over');
+  if(S.won){const par=LEVELS[S.li].par,st=stars(),last=S.li===LEVELS.length-1;
+    $('card').innerHTML=`<h2>Field cleared</h2><div class="big">${starStr(st)}</div>
+      <p>${S.moves} moves. Par is ${par}.${last?' That was the last field.':''}</p>
+      <div class="row">${last?'':'<button class="btn go" type="button" data-a="next">Next field</button>'}
+      <button class="btn${last?' go':''}" type="button" data-a="restart">Replay</button></div>`;
+    o.classList.add('show')}
+  else if(S.failed){$('card').innerHTML=`<h2>Flowers trampled</h2><p>The farmer will not be pleased. Take that run back.</p>
+      <div class="row"><button class="btn go" type="button" data-a="undo">Undo that run</button>
+      <button class="btn" type="button" data-a="restart">Restart field</button></div>`;
+    o.classList.add('show')}
+  else o.classList.remove('show');
+}
+function stars(){const par=LEVELS[S.li].par;return S.moves<=par?3:S.moves<=par+2?2:1}
+
+/* ---------- play ---------- */
+function clearTimers(){timers.forEach(clearTimeout);timers=[];busy=false;queued=null}
+function load(i,keep){
+  clearTimers();const P=parse(i);L=P.L;
+  if(!keep){const total=P.grass.reduce((a,b)=>a+b,0);
+    S={li:i,grass:P.grass,sheep:P.sheep,face:P.sheep.map(()=>'R'),fat:P.sheep.map(()=>0),share:Math.max(1,total/P.sheep.length),
+       sel:0,moves:0,hist:[],failed:false,won:false,tramp:-1}}
+  build();save();
+}
+function snap(){return JSON.stringify({grass:S.grass,sheep:S.sheep,face:S.face,fat:S.fat,sel:S.sel,moves:S.moves})}
+function move(d){
+  if(S.won||S.failed)return;
+  if(busy){queued=d;return}
+  const i=S.sel,r=slide(S.sheep,i,d),el=document.querySelectorAll('.sheep')[i];
+  if(d==='L'||d==='R'){S.face[i]=d;el.classList.toggle('left',d==='L')}
+  if(!r.path.length){el.classList.remove('nope');void el.offsetWidth;el.classList.add('nope');return}
+  S.hist.push(snap());S.moves++;
+  const eaten=[];
+  r.path.forEach(p=>{if(S.grass[p]){S.grass[p]--;S.fat[i]++;eaten.push(p)}});
+  S.sheep[i]=r.path[r.path.length-1];
+  if(r.trample){S.tramp=S.sheep[i];S.failed=true}
+  busy=true;const n=r.path.length;
+  placeSheep(i,n*STEP);
+  r.path.forEach((p,k)=>{if(eaten.includes(p)||(r.trample&&k===n-1))timers.push(setTimeout(()=>paintTile(p,true),(k+.6)*STEP))});
+  $('moves').textContent=S.moves;$('undo').disabled=false;
+  timers.push(setTimeout(()=>{busy=false;timers=[];
+    if(!S.failed&&S.grass.every(v=>!v)){S.won=true;const st=stars();if(st>(best[S.li]||0))best[S.li]=st}
+    save();
+    if(S.won||S.failed){queued=null;hud()}
+    else if(queued){const q=queued;queued=null;move(q)}},n*STEP+60));
+}
+function undo(){
+  if(busy||!S.hist.length)return;
+  Object.assign(S,JSON.parse(S.hist.pop()));S.failed=false;S.won=false;S.tramp=-1;
+  for(let p=0;p<L.w*L.h;p++)paintTile(p);
+  S.sheep.forEach((_,i)=>placeSheep(i,0));hud();save();
+}
+function select(i){if(busy||S.won||S.failed||i===S.sel)return;S.sel=i;S.sheep.forEach((_,k)=>placeSheep(k,0))}
+function save(){try{localStorage.setItem('lambchomp',JSON.stringify({best,li:S.li}))}catch(e){}}
+
+/* ---------- input ---------- */
+let start=null;
+const wrap=$('wrap');
+wrap.addEventListener('pointerdown',e=>{
+  if(e.target.closest('.over'))return;
+  const s=e.target.closest('.sheep');
+  start={x:e.clientX,y:e.clientY,sheep:s?+s.dataset.i:-1};
+  try{wrap.setPointerCapture(e.pointerId)}catch(_){}
+});
+wrap.addEventListener('pointerup',e=>{
+  if(!start)return;const dx=e.clientX-start.x,dy=e.clientY-start.y,st=start;start=null;
+  if(Math.hypot(dx,dy)<16){if(st.sheep>=0)select(st.sheep);return}
+  if(st.sheep>=0&&st.sheep!==S.sel)select(st.sheep);   // swipe that begins on a sheep moves that sheep
+  move(Math.abs(dx)>Math.abs(dy)?(dx>0?'R':'L'):(dy>0?'D':'U'));
+});
+wrap.addEventListener('pointercancel',()=>{start=null});
+$('board').addEventListener('click',e=>{const s=e.target.closest('.sheep');if(s&&e.detail===0)select(+s.dataset.i)}); // keyboard activation
+$('over').addEventListener('click',e=>{const a=e.target.closest('[data-a]');if(!a)return;
+  if(a.dataset.a==='next')load(S.li+1);else if(a.dataset.a==='undo')undo();else load(S.li)});
+$('undo').onclick=undo;
+$('restart').onclick=()=>load(S.li);
+addEventListener('keydown',e=>{
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  const k=e.key.toLowerCase(),m={arrowright:'R',d:'R',arrowleft:'L',a:'L',arrowdown:'D',s:'D',arrowup:'U',w:'U'}[k];
+  if(m){e.preventDefault();move(m)}
+  else if(k==='z'||k==='backspace'){e.preventDefault();undo()}
+  else if(k==='r')load(S.li);
+  else if(k===' '&&S&&S.sheep.length>1&&!e.target.closest('button')){e.preventDefault();select((S.sel+1)%S.sheep.length)}
+});
+addEventListener('resize',size);
+if(window.ResizeObserver)new ResizeObserver(size).observe(wrap);
+
+/* ---------- boot ---------- */
+function boot(data){
+  let li=0;
+  try{const s=JSON.parse(localStorage.getItem('lambchomp')||'null');if(s){best=s.best||{};li=Math.min(LEVELS.length-1,s.li|0)}}catch(e){}
+  if(data&&data.S&&LEVELS[data.S.li]){best=data.best||best;S=data.S;load(S.li,true)}
+  else load(li);
+}
+window.claude?.hot?.snapshot?.(()=>({S,best}));
+window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?.data??{});
+</script>
+</body>
+</html>
