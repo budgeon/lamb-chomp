@@ -1,0 +1,107 @@
+[
+  {
+    "id": "field-01",
+    "par": 5,
+    "hint": "Swipe to send the sheep running. It eats every grass tile it crosses and stops at the fence.",
+    "rows": [
+      "ggggg",
+      "g##gg",
+      "g..Sg",
+      "g#..g",
+      "ggggg"
+    ]
+  },
+  {
+    "id": "field-02",
+    "par": 8,
+    "hint": "Rocks stop a run. Use them to line up the next one.",
+    "rows": [
+      "ggggg#",
+      "gggggg",
+      "g#.#.g",
+      "gSgggg",
+      "g..##g",
+      "gggggg"
+    ]
+  },
+  {
+    "id": "field-03",
+    "par": 9,
+    "hint": "Dark, tall grass takes two passes to clear.",
+    "rows": [
+      "ggggGg",
+      "g.g#Sg",
+      "g.g.Gg",
+      "g#g.gg",
+      "ggggGg",
+      "ggg###"
+    ]
+  },
+  {
+    "id": "field-04",
+    "par": 9,
+    "hint": "Mud stops a sheep the moment it steps in.",
+    "rows": [
+      ".#m.mg",
+      "#gg#gg",
+      ".gg.gg",
+      "Sggggg",
+      ".gg.gg",
+      "#ggggg"
+    ]
+  },
+  {
+    "id": "field-05",
+    "par": 10,
+    "hint": "Never run into a flowerbed. Plan around it.",
+    "rows": [
+      "gggggg",
+      "g.gf#g",
+      "g.g.#g",
+      "gggggg",
+      "g.g#gf",
+      "ggg#Sg"
+    ]
+  },
+  {
+    "id": "field-06",
+    "par": 10,
+    "hint": "Two sheep. Tap one to choose it. They block each other.",
+    "rows": [
+      ".#g.#g",
+      "#.g.gg",
+      "gggggg",
+      "g#g.gg",
+      "gSgggg",
+      "ggSgg#"
+    ]
+  },
+  {
+    "id": "field-07",
+    "par": 12,
+    "hint": "Mud, flowers and tall grass in one field.",
+    "rows": [
+      ".mSfgG",
+      "gggGgG",
+      "gg..g#",
+      "gg..g#",
+      "ggfmg.",
+      "ggggg#",
+      "g#.#.."
+    ]
+  },
+  {
+    "id": "field-08",
+    "par": 13,
+    "hint": "Last field. Two sheep and every obstacle.",
+    "rows": [
+      "gggg#g",
+      "g..m#g",
+      "g..mSG",
+      "g..gSg",
+      "G#fggf",
+      "Ggggg#",
+      "ggg#g#"
+    ]
+  }
+]
