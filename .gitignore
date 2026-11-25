@@ -11,3 +11,27 @@ Thumbs.db
 dist/
 build/
 coverage/
+
+# --- Expo ---
+.expo/
+web-build/
+expo-env.d.ts
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.pem
+.env*.local
+*.tsbuildinfo
+/ios
+/android
+
+# delivery workflow state (per worktree)
+.delivery/
