@@ -1,0 +1,97 @@
+# Journey: open field 1 on a clean install and play it to clear with the par
+# solution U L D R U. Covers spec AC1, AC2, AC3, AC4 and AC6.
+# Stars are out of scope for this change and come with the stars feature.
+appId: com.lambchomp.app
+name: Field 1 - play the par solution to clear
+tags:
+  - journey
+---
+# AC1: field 1 renders from a clean install.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "app-root"
+    timeout: 20000
+- assertVisible: {id: "board"}
+- assertVisible: {id: "field-title", text: "Field 1"}
+- assertVisible: {id: "moves-count", text: "0"}
+- assertVisible: {id: "par-value", text: "5"}
+- assertVisible: {id: "field-hint"}
+- takeScreenshot: field1-launch
+
+# AC2: the board matches field-01 in levels.json (spot checks; the full
+# comparison is the Jest test in src/play/__tests__/boardView.test.ts).
+- assertVisible: {id: "cell-0-0", text: "grass, column 1, row 1"}
+- assertVisible: {id: "cell-1-1", text: "rock, column 2, row 2"}
+- assertVisible: {id: "cell-1-2", text: "soil, column 2, row 3"}
+- assertVisible: {id: "cell-3-1", text: "grass, column 4, row 2"}
+- assertVisible: {id: "sheep-0", text: "Sheep, column 4, row 3"}
+# AC3: all four corners of the paddock are on screen (no clipping or scrolling).
+- assertVisible: {id: "cell-4-0"}
+- assertVisible: {id: "cell-0-4"}
+- assertVisible: {id: "cell-4-4"}
+
+# AC4: a swipe UP sends the sheep to the fence and grazes the cells it enters.
+- swipe:
+    from: {id: "paddock"}
+    direction: UP
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "1"}
+    timeout: 3000
+- assertVisible: {id: "sheep-0", text: "Sheep, column 4, row 1"}
+- assertVisible: {id: "cell-3-1", text: "soil, column 4, row 2"}
+- assertVisible: {id: "cell-3-0", text: "soil, column 4, row 1"}
+- assertVisible: {id: "cell-4-1", text: "grass, column 5, row 2"}
+- takeScreenshot: field1-after-up
+
+# AC6: finish the par solution L D R U.
+- swipe:
+    from: {id: "paddock"}
+    direction: LEFT
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "2"}
+    timeout: 3000
+- assertVisible: {id: "sheep-0", text: "Sheep, column 1, row 1"}
+- swipe:
+    from: {id: "paddock"}
+    direction: DOWN
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "3"}
+    timeout: 3000
+- assertVisible: {id: "sheep-0", text: "Sheep, column 1, row 5"}
+- swipe:
+    from: {id: "paddock"}
+    direction: RIGHT
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "4"}
+    timeout: 3000
+- assertVisible: {id: "sheep-0", text: "Sheep, column 5, row 5"}
+- swipe:
+    from: {id: "paddock"}
+    direction: UP
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "5"}
+    timeout: 3000
+- assertVisible: {id: "sheep-0", text: "Sheep, column 5, row 1"}
+- assertVisible: {id: "field-cleared", text: "Field cleared"}
+- assertNotVisible: {id: "field-hint"}
+# No cell reads grass any more (regex on the accessibility label) ...
+- assertNotVisible: {text: "grass, .*"}
+# ... and the path cells read soil.
+- assertVisible: {id: "cell-0-0", text: "soil, column 1, row 1"}
+- assertVisible: {id: "cell-2-0", text: "soil, column 3, row 1"}
+- assertVisible: {id: "cell-0-4", text: "soil, column 1, row 5"}
+- assertVisible: {id: "cell-4-4", text: "soil, column 5, row 5"}
+- assertVisible: {id: "cell-4-0", text: "soil, column 5, row 1"}
+- assertVisible: {id: "cell-4-1", text: "soil, column 5, row 2"}
+- takeScreenshot: field1-cleared
+
+# A swipe after clearing is ignored: the move count stays at 5.
+- swipe:
+    from: {id: "paddock"}
+    direction: LEFT
+- waitForAnimationToEnd
+- assertVisible: {id: "moves-count", text: "5"}
+- assertVisible: {id: "sheep-0", text: "Sheep, column 5, row 1"}
+- assertVisible: {id: "field-cleared", text: "Field cleared"}

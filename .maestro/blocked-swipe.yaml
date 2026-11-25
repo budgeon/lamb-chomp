@@ -1,0 +1,59 @@
+# Journey: input edge cases on field 1.
+#   Part 1 (spec AC5): a swipe into the fence is not a move.
+#   Part 2 (spec AC9, simulator part): two quick swipes, the second sent while
+#   the first run is still animating, are both applied.
+# U then L ends at column 1, row 1 with or without buffering, so part 2 catches
+# a dropped swipe, not the buffering mechanism itself. The buffer (queue,
+# replace, apply once, drop on clear) is guarded by src/play/__tests__/session.test.ts.
+appId: com.lambchomp.app
+name: Blocked swipe and buffered double swipe
+tags:
+  - journey
+---
+# Part 1, AC5: swipe RIGHT to the fence, then RIGHT again into it.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "app-root"
+    timeout: 20000
+- assertVisible: {id: "sheep-0", text: "Sheep, column 4, row 3"}
+- swipe:
+    from: {id: "paddock"}
+    direction: RIGHT
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "1"}
+    timeout: 3000
+- assertVisible: {id: "sheep-0", text: "Sheep, column 5, row 3"}
+- swipe:
+    from: {id: "paddock"}
+    direction: RIGHT
+- waitForAnimationToEnd
+- assertVisible: {id: "sheep-0", text: "Sheep, column 5, row 3"}
+- assertVisible: {id: "moves-count", text: "1"}
+- assertVisible: {id: "board"}
+- takeScreenshot: blocked-after
+
+# Part 2, AC9: UP then LEFT, short swipes with no settle wait in between.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "app-root"
+    timeout: 20000
+- assertVisible: {id: "moves-count", text: "0"}
+- swipe:
+    from: {id: "paddock"}
+    direction: UP
+    duration: 100
+    waitToSettleTimeoutMs: 0
+- swipe:
+    from: {id: "paddock"}
+    direction: LEFT
+    duration: 100
+    waitToSettleTimeoutMs: 0
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "2"}
+    timeout: 3000
+- assertVisible: {id: "sheep-0", text: "Sheep, column 1, row 1"}
+- takeScreenshot: buffer-after
