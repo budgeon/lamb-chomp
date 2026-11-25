@@ -1,0 +1,14 @@
+# Smoke: the app launches from a clean install and renders its first screen.
+appId: com.lambchomp.app
+name: Smoke - launch and render
+tags:
+  - smoke
+---
+- launchApp:
+    clearState: true
+# TODO: once the root view has testID "app-root", assert `id: "app-root"` instead
+# of the scaffold text, so this flow survives copy changes.
+- extendedWaitUntil:
+    visible: "Open up App.tsx to start working on your app!"
+    timeout: 20000
+- takeScreenshot: smoke-launch

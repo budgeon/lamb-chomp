@@ -23,13 +23,24 @@ This file carries the context from the planning session (10–13 Nov 2026) in wh
 - The field is cleared when no grass or tall grass remains.
 - Par is the true minimum number of moves, found by breadth-first search. Three stars at par, two at par + 2, one otherwise.
 
-The reference implementation of these rules is the `slide()` function in `prototype/index.html` and `tools/gen.js`. They must stay identical in behaviour.
+The production implementation is the pure module in `src/game/` (`slide`, `solve`, `parseLevel`, ...). It must behave identically to the reference `slide()` in `prototype/index.html`; the parity test in `src/game/__tests__/` enforces this. Sheep are indexed in scan order (left to right, top to bottom), as in the prototype; `tools/gen.js` numbers them in placement order.
 
 ## Layout
 
 ```
 CLAUDE.md               this file
+AGENTS.md               Expo/React Native guidance (Expo changes every SDK; check versioned docs)
 README.md               how to use this bundle
+App.tsx, index.ts       Expo app entry (React Native, SDK 58)
+src/game/               pure rules + BFS solver + levels (src/game/levels/levels.json), with tests
+src/economy/            coin/cosmetic/ad config and the balance simulation
+scripts/gate.ts         runs every quality gate; scripts/gates/ holds the level and economy gates
+.claude/skills/         /deliver-feature, /fix-bug, /new-levels workflows
+.claude/agents/         spec, planner, implementer, verifier, reviewer, bug and level agents
+.claude/hooks/          pr-gate.mjs blocks `gh pr create` without verify + review evidence
+.maestro/               Maestro flows run on the iOS Simulator during Verify
+.github/workflows/      CI runs the same gates on every PR
+docs/WORKFLOW.md        how features are delivered: stages, gates, impact flags
 docs/DECISIONS.md       decision log, including the name
 docs/GAME_DESIGN.md     rules, components, level format, parked ideas
 docs/MARKET_NOTES.md    market research summary with sources
@@ -43,9 +54,23 @@ tools/levels.json       the 8 generated fields with their pars
 ## Commands
 
 ```
-node tools/check.js     # every field must report cleared: true at par
-node tools/gen.js       # regenerates candidates; takes about 30 seconds
+npm run gate            # all gates: typecheck, lint, jest, level gate, economy gate
+npm run gate:levels     # every level valid, solvable, stored par = solver minimum
+npm run gate:economy    # coin balance simulation; ads must be rewarded hints only
+npm test                # jest (rules, parity, properties, economy)
+npx expo run:ios        # build and run on the iOS Simulator
+node tools/check.js     # legacy: replays stored solutions against the prototype
+node tools/gen.js       # legacy generator; takes about 30 seconds
 ```
+
+## Delivery workflow
+
+All feature work goes through `/deliver-feature`, bugs through `/fix-bug`, new levels through `/new-levels`. See `docs/WORKFLOW.md`. The non-negotiables:
+- Verify and Review are done by the `feature-verifier` and `feature-reviewer` subagents, never by the orchestrator.
+- `npm run gate` must pass before Verify can pass.
+- The PR hook blocks `gh pr create` unless `.delivery/verify.md` (`Overall: PASS`) and `.delivery/review.md` (`Verdict: APPROVE`) both record the current HEAD commit and the tree is clean. Any new commit means re-running Verify and Review.
+- Never merge. The owner merges.
+- Never weaken a test to make it pass.
 
 `gen.js` is seeded, so it reproduces the same 8 fields. Change the seeds or the `specs` array to get new ones.
 
