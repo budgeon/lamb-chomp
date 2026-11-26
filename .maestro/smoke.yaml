@@ -6,9 +6,8 @@ tags:
 ---
 - launchApp:
     clearState: true
-# TODO: once the root view has testID "app-root", assert `id: "app-root"` instead
-# of the scaffold text, so this flow survives copy changes.
 - extendedWaitUntil:
-    visible: "Open up App.tsx to start working on your app!"
+    visible:
+      id: "app-root"
     timeout: 20000
 - takeScreenshot: smoke-launch

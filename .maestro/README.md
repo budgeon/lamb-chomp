@@ -32,9 +32,9 @@ maestro studio                               # inspect the view hierarchy and bu
 
 | Flow | Status |
 |---|---|
-| `smoke.yaml`: launch and render | Done (asserts scaffold text until the root view has a testID) |
-| `field-1.yaml`: open field 1, play the par solution `U L D R U`, assert cleared and three stars | TODO |
-| `blocked-swipe.yaml`: swipe into the fence, assert no move counted | TODO |
+| `smoke.yaml`: launch and render | Done (asserts `id: "app-root"`) |
+| `field-1.yaml`: open field 1, check the board against `field-01`, play the par solution `U L D R U`, assert every cell grazed and "Field cleared", a later swipe is ignored | Done (stars come later with the stars feature) |
+| `blocked-swipe.yaml`: swipe into the fence, assert no move counted; two quick swipes `U` then `L`, assert both applied; a ~8 pt swipe is ignored and a ~24 pt swipe is a move (16 pt threshold measured from touch-down) | Done (the buffer mechanism itself is guarded by Jest, `src/play/__tests__/session.test.ts`) |
 | `flowerbed-fail.yaml`: trample a flowerbed, assert fail state, undo restores | TODO |
 | `two-sheep.yaml`: select each sheep by tap and by swipe start | TODO |
 | `progress-persists.yaml`: clear a field, relaunch without clearState, stars remain | TODO |
