@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useReducer, useState } from 'react';
+import { useCallback, useMemo, useReducer, useRef, useState } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
@@ -6,7 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isCleared } from '../game';
 import type { Level } from '../game';
-import { SWIPE_MIN_DISTANCE, swipeDirection } from '../input/swipe';
+import { SWIPE_MIN_DISTANCE, swipeBetween } from '../input/swipe';
+import type { Point } from '../input/swipe';
 import { buildBoardView } from '../play/boardView';
 import { cellSize } from '../play/layout';
 import { initialSession, sessionReducer } from '../play/session';
@@ -40,15 +41,30 @@ export function FieldScreen({ level, index }: Props) {
 
   const onRunEnd = useCallback((runId: number) => dispatch({ type: 'runEnd', runId }), []);
 
-  // Fires once per swipe, on the JS thread. There is no selection UI yet, so the
-  // swipe goes to sheep 0 (spec section 4).
+  // Where the finger touched down, in window coordinates. The swipe is measured
+  // from here to the lift point. Not from e.translationX/Y: on iOS, RNGH resets
+  // the translation to zero when the pan activates at minDistance, which would
+  // drop the first 16 pt and measure from the activation point (verify F1).
+  const touchStart = useRef<Point | null>(null);
+
+  // Callbacks run on the JS thread, in order. onBegin fires at touch-down;
+  // onDeactivate fires once per activated pan, when the finger lifts. There is no
+  // selection UI yet, so the swipe goes to sheep 0 (spec section 4).
   const pan = usePanGesture({
+    // Only gates activation (16 pt from touch-down), so taps never become pans.
     minDistance: SWIPE_MIN_DISTANCE,
     runOnJS: true,
+    onBegin: (e) => {
+      touchStart.current = { x: e.absoluteX, y: e.absoluteY };
+    },
     onDeactivate: (e) => {
-      if (e.canceled) return;
-      const dir = swipeDirection(e.translationX, e.translationY);
+      const start = touchStart.current;
+      if (e.canceled || !start) return;
+      const dir = swipeBetween(start, { x: e.absoluteX, y: e.absoluteY });
       if (dir) dispatch({ type: 'swipe', sheep: 0, dir });
+    },
+    onFinalize: () => {
+      touchStart.current = null;
     },
   });
 

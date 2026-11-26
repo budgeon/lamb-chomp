@@ -21,3 +21,23 @@ export function swipeDirection(
   if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? 'right' : 'left';
   return dy > 0 ? 'down' : 'up';
 }
+
+/** A point in screen coordinates (points, y grows downward). */
+export interface Point {
+  x: number;
+  y: number;
+}
+
+/**
+ * Classifies a swipe from the touch-down point to the lift point. Use this rather
+ * than a gesture runtime's translation: react-native-gesture-handler on iOS resets
+ * the pan's translation to zero when the pan activates (after its own minDistance),
+ * so the translation leaves out the start of the swipe.
+ */
+export function swipeBetween(
+  start: Point,
+  end: Point,
+  minDistance: number = SWIPE_MIN_DISTANCE,
+): Dir | null {
+  return swipeDirection(end.x - start.x, end.y - start.y, minDistance);
+}
