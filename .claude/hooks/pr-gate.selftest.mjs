@@ -63,6 +63,8 @@ try {
     expect('non-PR command passes through', run(dir, 'npm test'), 0);
     expect('gh pr view passes through', run(dir, 'gh pr view 3'), 0);
     expect('no evidence blocks', run(dir, PR), 2, /verify\.md not found[\s\S]*review\.md not found/);
+    expect('block names the checked directory', run(dir, PR), 2, new RegExp(`Checked: \\S*${dir.split('/').pop()}`));
+    expect('block suggests entering the worktree', run(dir, PR), 2, /EnterWorktree/);
   }
   {
     const { dir, head } = repo();

@@ -68,7 +68,9 @@ The verifier runs `npm run gate`, builds a Release build with `npx expo run:ios 
 
 ## Still manual
 
-- **Install Maestro** (and Java 17+): `brew tap mobile-dev-inc/tap && brew install mobile-dev-inc/tap/maestro`. Until it is installed, Verify reports `BLOCKED`.
+- **Install Maestro** (and Java 17+): `brew tap mobile-dev-inc/tap && brew install mobile-dev-inc/tap/maestro`. Until it is installed, Verify reports `BLOCKED`. Homebrew's `openjdk@17` is keg-only. If you skip its `sudo ln` step, Claude runs Maestro with `JAVA_HOME=/opt/homebrew/opt/openjdk@17`.
+- **Free disk space:** Setup stops and asks if less than 15 GB is free, because the native builds need about 10–15 GB.
+- **One simulator at a time:** a run boots only one of its two simulators at a time (SE first, then the Pro Max).
 - **Xcode simulator runtimes** for an iPhone SE and a current Pro Max.
 - **GitHub branch protection on `main`:** require a PR, passing CI, and no force-pushes. The hook only guards Claude's own `gh pr create`; branch protection guards everything else.
 - **`gh auth login`** so Claude can open PRs.

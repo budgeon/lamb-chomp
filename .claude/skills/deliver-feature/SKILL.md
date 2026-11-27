@@ -51,10 +51,13 @@ Update `state.md` after every transition. For `resume <slug>`, read `~/Projects/
 1. Confirm the main checkout is clean and run `git fetch origin`.
 2. Pick a short kebab-case slug.
 3. `git worktree add -b feature/<slug> ~/Projects/lamb-chomp-worktrees/<slug> origin/main`
-4. `npm ci` in the worktree, then create `.delivery/state.md`.
-5. Run the environment preflight in `references/native-verification.md` (Xcode, Maestro, run simulators, Metro port).
+4. Switch the session into it with the `EnterWorktree` tool (`path: ~/Projects/lamb-chomp-worktrees/<slug>`, expanded to an absolute path). From here on, every command runs in the worktree without a `cd`.
+5. `npm ci` in the worktree, then create `.delivery/state.md`.
+6. Run the environment preflight in `references/native-verification.md` (disk, Xcode, Maestro and Java, run simulators with only the SE booted, Metro port and the Debug app's Metro setting). Raise every failure with the user now, before Spec.
 
 Worktrees keep parallel runs and the user's checkout apart. Keep them outside `~/Documents` (iCloud eviction corrupts git).
+
+The session must be in the worktree, not just `cd`-ing into it: the PR hook reads `.delivery/` from the session's working directory, so `cd <worktree> && gh pr create` from the main checkout is blocked even with valid evidence. On `resume <slug>`, enter the worktree the same way before anything else.
 
 ### 2. Spec (`feature-spec`)
 
@@ -72,7 +75,14 @@ One implementer per task in dependency order. Run tasks in parallel only when th
 
 ### 5. Verify (`feature-verifier`)
 
-Before it starts, have a stable Release build ready on the run's simulators (see `references/native-verification.md`) and give it the sha, simulator UDIDs, and, after a fix loop, the files changed since the last verify.
+Before it starts, have a stable Release build of the committed sha installed on the SE (see `references/native-verification.md`). Give the verifier:
+- the sha and the `.app` path
+- both simulator UDIDs and the one-simulator-at-a-time order
+- the Maestro `JAVA_HOME=…` prefix, if one is recorded
+- the Metro port and PID
+- after a fix loop, the files changed since the last verify
+
+If `ui` is flagged, keep Metro running through Verify: the verifier needs it for the Debug Perf Monitor check.
 
 - `Overall: PASS`: go to Review.
 - `Overall: FAIL`: send the failures to an implementer, commit, verify again.
@@ -93,7 +103,7 @@ Archive any earlier `review.md` as `review-<n>.md` first. Spawn a fresh reviewer
 
 **Gate:** show the user the diff summary, `gate.json` result, verification evidence with screenshot paths, the review verdict, any `MANUAL` checks with steps, Known issues, and release notes (EAS build or store steps if `native`). Wait for approval.
 
-After approval, confirm the tree is clean and `HEAD` matches both `Commit:` lines, push `feature/<slug>`, and run `gh pr create` into `main`. The PR body covers summary, acceptance evidence, risks, Known issues, and release steps, and follows the repository's attribution instructions. Report the PR URL and CI status, then stop.
+After approval, confirm the session is in the worktree, the tree is clean, and `HEAD` matches both `Commit:` lines. Then push `feature/<slug>` and run `gh pr create` into `main`. The PR body covers summary, acceptance evidence, risks, Known issues, and release steps, and follows the repository's attribution instructions. Report the PR URL and CI status, then stop.
 
 ## Known issues
 
@@ -109,4 +119,4 @@ Keep `## Known issues` in `state.md` for problems found but not fixed: `PRE-EXIS
 - Never weaken, skip, or delete a test to get a pass. A test that is truly wrong needs a reason in `state.md` and a mention at the PR gate.
 - Every new guarding test is proved: remove the code it protects, see it fail, restore exactly.
 - Report checks that did not run as `NOT RUN`, never as passed.
-- At cleanup (after the user merges or abandons), stop Metro, delete the run's simulators, and remove the worktree and any base worktree.
+- At cleanup (after the user merges or abandons): stop Metro, and delete the run's simulators. Then leave the worktree with `ExitWorktree` (`action: keep`, because it was entered by path), and remove the worktree and any base worktree with `git worktree remove`.
