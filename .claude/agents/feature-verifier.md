@@ -11,7 +11,7 @@ Read `.delivery/state.md`, the acceptance source (`spec.md` + `plan.md` for a fe
 Start with `git status --porcelain` (must be empty apart from ignored files) and `git rev-parse HEAD`. If the tree is dirty, stop and report it. Use the simulators and Metro port the orchestrator gives you; never create, erase, or shut down others. Append progress lines to `verify.md` as you go. If told files changed since a previous verify, follow the re-verification rules.
 
 1. Run `npm run gate` and read `.delivery/gate.json`.
-2. Build Release and install on both run simulators.
+2. Build Release and install it on the run simulators, one at a time: finish every SE check, shut the SE down, then boot the Pro Max and install the same `.app`. Prefix Maestro with the `JAVA_HOME=…` the orchestrator gives you, if any. If `ui` is flagged, do the Debug Perf Monitor check on the SE, using the orchestrator's Metro, before shutting the SE down.
 3. Run the `.maestro/` suite on each simulator with output in `.delivery/evidence/`, then look at every screenshot.
 4. Check each AC individually. For a bug, confirm the original reproduction no longer occurs and the regression test passes.
 5. Run the extra checks for each impact flag.

@@ -44,10 +44,13 @@ if (process.env.LAMBCHOMP_ALLOW_UNGATED_PR === '1') {
 }
 
 const block = (problems) => {
+  const checked = top ?? cwd;
   process.stderr.write(
     'pr-gate: blocked `gh pr create`. Missing delivery evidence:\n' +
       problems.map((p) => `  - ${p}\n`).join('') +
-      'Run verification and review for the current HEAD first.\n' +
+      `Checked: ${checked} (the session's working directory; a \`cd\` inside the command is not followed).\n` +
+      'If the run lives in a worktree, switch the session into it (EnterWorktree with its path) and retry.\n' +
+      'Otherwise run verification and review for the current HEAD first.\n' +
       'For non-feature PRs only, set LAMBCHOMP_ALLOW_UNGATED_PR=1.\n',
   );
   process.exit(2);
@@ -56,7 +59,7 @@ const block = (problems) => {
 const git = (args, cwd) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
 const cwd = typeof input.cwd === 'string' && input.cwd ? input.cwd : process.cwd();
-let top;
+let top = null;
 let head;
 try {
   top = git(['rev-parse', '--show-toplevel'], cwd);

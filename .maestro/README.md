@@ -4,7 +4,7 @@ End-to-end flows that drive the iOS Simulator build of Lamb Chomp (`appId: com.l
 
 ## Setup
 
-1. Xcode with an iOS Simulator runtime, and Java 17+ (`java -version`).
+1. Xcode with an iOS Simulator runtime, and Java 17+ (`java -version`). Homebrew's `openjdk@17` is keg-only. If `java -version` can't find it, either run the `sudo ln -sfn …` step from `brew info openjdk@17`, or prefix Maestro commands with `JAVA_HOME=/opt/homebrew/opt/openjdk@17`.
 2. Install Maestro: `brew tap mobile-dev-inc/tap && brew install mobile-dev-inc/tap/maestro`, or `curl -fsSL "https://get.maestro.mobile.dev" | bash`. Check: `maestro --version`.
 3. Boot a simulator: `xcrun simctl boot "iPhone SE (3rd generation)" && open -a Simulator`.
 4. Build and install the app:
@@ -19,6 +19,8 @@ maestro test .maestro/smoke.yaml             # one flow
 maestro --device <udid> test .maestro/ --test-output-dir .delivery/evidence/maestro-se
 maestro studio                               # inspect the view hierarchy and build selectors
 ```
+
+Against a **Debug** build, point `--test-output-dir` outside the repo. Metro watches the repo and reloads the app when new screenshot files appear, which resets the field mid-flow. Release builds don't use Metro, so this doesn't affect them. A Debug build on a non-default Metro port also needs `RCT_jsLocation` set on the simulator; see `native-verification.md`, preflight step 5.
 
 ## Writing flows
 

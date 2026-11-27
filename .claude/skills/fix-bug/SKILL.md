@@ -39,8 +39,9 @@ For `resume <slug>`, read `~/Projects/lamb-chomp-worktrees/<slug>/.delivery/stat
 1. Confirm the main checkout is clean; `git fetch origin`.
 2. Pick a short kebab-case slug.
 3. `git worktree add -b fix/<slug> ~/Projects/lamb-chomp-worktrees/<slug> origin/main`
-4. `npm ci`, create `.delivery/state.md`.
-5. Run the preflight in `../deliver-feature/references/native-verification.md`.
+4. Switch the session into it with the `EnterWorktree` tool (`path`, absolute). The PR hook reads `.delivery/` from the session's working directory, so a `cd` inside a command is not enough. Do the same on `resume <slug>`.
+5. `npm ci`, create `.delivery/state.md`.
+6. Run the preflight in `../deliver-feature/references/native-verification.md`: disk, Maestro and Java, simulators with only the SE booted, Metro, and the Debug app's Metro setting.
 
 If the report is about one level being unsolvable, too easy, or having the wrong par, the bug may be level data: still use this workflow, but expect the fix in `src/game/levels/` and `npm run gate:levels` to be the regression check.
 
@@ -81,7 +82,7 @@ Archive the previous `review.md` as `review-<n>.md`, then a fresh reviewer with 
 
 **Gate:** show the root cause, diff summary, before-and-after evidence, `gate.json`, review verdict, `MANUAL` checks, Known issues, and release notes (JS-only or needs a native build). Wait for approval.
 
-After approval, confirm a clean tree and matching `Commit:` lines, push `fix/<slug>`, `gh pr create` into `main` (symptom, root cause, fix, evidence, risks, Known issues; follow the repository's attribution instructions). Report the URL and CI status, then stop.
+After approval, confirm the session is in the worktree, the tree is clean, and the `Commit:` lines match. Then push `fix/<slug>`, run `gh pr create` into `main` (symptom, root cause, fix, evidence, risks, Known issues; follow the repository's attribution instructions). Report the URL and CI status, then stop.
 
 ## Known issues
 
