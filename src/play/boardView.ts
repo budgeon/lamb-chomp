@@ -7,7 +7,14 @@
  */
 import type { State } from '../game';
 
-export type CellKind = 'grass' | 'tall grass' | 'soil' | 'rock' | 'mud' | 'flowerbed';
+export type CellKind =
+  | 'grass'
+  | 'tall grass'
+  | 'soil'
+  | 'rock'
+  | 'mud'
+  | 'flowerbed'
+  | 'trampled flowerbed';
 
 export interface CellView {
   p: number;
@@ -34,7 +41,11 @@ export interface BoardView {
   sheep: SheepView[];
 }
 
-/** What a cell looks like right now. Grass amount wins over terrain. */
+/**
+ * What a cell looks like right now. Grass amount wins over terrain. The
+ * flowerbed a sheep ran into (`state.trampled`, as the prototype's `S.tramp`)
+ * shows as trampled until the run is undone or the field restarted.
+ */
 export function cellKind(state: State, p: number): CellKind {
   const g = state.grass[p];
   if (g === 2) return 'tall grass';
@@ -45,7 +56,7 @@ export function cellKind(state: State, p: number): CellKind {
     case 'm':
       return 'mud';
     case 'f':
-      return 'flowerbed';
+      return state.trampled === p ? 'trampled flowerbed' : 'flowerbed';
     default:
       return 'soil';
   }

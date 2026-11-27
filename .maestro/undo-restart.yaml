@@ -1,0 +1,78 @@
+# Journey: undo and restart on field 1. Covers spec AC10, AC13 and AC14 (field 1).
+# Disabled buttons are checked with `enabled: false`, which reads the iOS
+# not-enabled trait that RN sets from `accessibilityState.disabled`. The
+# component test (FieldScreen.controls.test.tsx) guards the prop itself.
+appId: com.lambchomp.app
+name: Undo and restart on field 1
+tags:
+  - journey
+---
+# 1. Launch: both buttons disabled, controls and all four corners on screen (AC14).
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "app-root"
+    timeout: 20000
+- assertVisible: {id: "field-title", text: "Field 1"}
+- assertVisible: {id: "moves-count", text: "0"}
+- assertVisible: {id: "controls"}
+- assertVisible: {id: "undo-button", enabled: false}
+- assertVisible: {id: "restart-button", enabled: false}
+- assertVisible: {id: "cell-0-0"}
+- assertVisible: {id: "cell-4-0"}
+- assertVisible: {id: "cell-0-4"}
+- assertVisible: {id: "cell-4-4"}
+- takeScreenshot: undo-restart-start
+
+# 2. AC10: swipe UP, then Undo puts the sheep and the grass back.
+- swipe:
+    from: {id: "paddock"}
+    direction: UP
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "1"}
+    timeout: 3000
+- assertVisible: {id: "sheep-0", text: "Sheep, column 4, row 1"}
+- assertVisible: {id: "cell-3-1", text: "soil, column 4, row 2"}
+- assertVisible: {id: "undo-button", enabled: true}
+- assertVisible: {id: "restart-button", enabled: true}
+- tapOn: {id: "undo-button"}
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "0"}
+    timeout: 3000
+- assertVisible: {id: "sheep-0", text: "Sheep, column 4, row 3"}
+- assertVisible: {id: "cell-3-1", text: "grass, column 4, row 2"}
+- assertVisible: {id: "undo-button", enabled: false}
+- assertVisible: {id: "restart-button", enabled: false}
+- assertVisible: {id: "controls"}
+- takeScreenshot: undo-restart-after-undo
+
+# 3. AC13: two moves, then Restart gives the starting field and disabled buttons.
+- swipe:
+    from: {id: "paddock"}
+    direction: UP
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "1"}
+    timeout: 3000
+- swipe:
+    from: {id: "paddock"}
+    direction: LEFT
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "2"}
+    timeout: 3000
+- assertVisible: {id: "sheep-0", text: "Sheep, column 1, row 1"}
+- assertVisible: {id: "cell-0-0", text: "soil, column 1, row 1"}
+- tapOn: {id: "restart-button"}
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "0"}
+    timeout: 3000
+- assertVisible: {id: "sheep-0", text: "Sheep, column 4, row 3"}
+- assertVisible: {id: "cell-0-0", text: "grass, column 1, row 1"}
+- assertVisible: {id: "cell-1-1", text: "rock, column 2, row 2"}
+- assertVisible: {id: "cell-1-2", text: "soil, column 2, row 3"}
+- assertVisible: {id: "cell-3-1", text: "grass, column 4, row 2"}
+- assertVisible: {id: "undo-button", enabled: false}
+- assertVisible: {id: "restart-button", enabled: false}
+- assertVisible: {id: "controls"}
+- assertVisible: {id: "cell-4-4"}
+- takeScreenshot: undo-restart-after-restart

@@ -1,0 +1,120 @@
+# Journey: trample a flowerbed on field 5, see the fail state, undo it, then
+# fail again and restart. Covers spec AC4 (M), AC5, AC11, AC13 (field 5),
+# AC14 (field 5) and AC18 (M).
+# Field 5 is opened with the hidden `startField` launch argument, which App.tsx
+# reads once via RN `Settings.get` (spec Q1 a). field-05:
+#   gggggg
+#   g.gf#g
+#   g.g.#g
+#   gggggg
+#   g.g#gf   <- flowerbed at column 6, row 5 (cell-5-4)
+#   ggg#Sg   <- sheep at column 5, row 6
+# RIGHT then UP runs the sheep onto the flowerbed.
+appId: com.lambchomp.app
+name: Flowerbed fail, undo and restart on field 5
+tags:
+  - journey
+---
+# 1. Field 5 opens from the launch argument; board and controls fit (AC18, AC14).
+- launchApp:
+    clearState: true
+    arguments:
+      startField: 5
+- extendedWaitUntil:
+    visible:
+      id: "app-root"
+    timeout: 20000
+- assertVisible: {id: "field-title", text: "Field 5"}
+- assertVisible: {id: "par-value", text: "10"}
+- assertVisible: {id: "moves-count", text: "0"}
+- assertVisible: {id: "sheep-0", text: "Sheep, column 5, row 6"}
+- assertVisible: {id: "cell-5-4", text: "flowerbed, column 6, row 5"}
+- assertVisible: {id: "cell-0-0"}
+- assertVisible: {id: "cell-5-0"}
+- assertVisible: {id: "cell-0-5"}
+- assertVisible: {id: "cell-5-5"}
+- assertVisible: {id: "controls"}
+- assertVisible: {id: "undo-button", enabled: false}
+- assertVisible: {id: "restart-button", enabled: false}
+- assertVisible: {id: "field-hint"}
+- takeScreenshot: flowerbed-start
+
+# 2. AC4: RIGHT, then UP onto the flowerbed fails the field.
+- swipe:
+    from: {id: "paddock"}
+    direction: RIGHT
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "1"}
+    timeout: 3000
+- assertVisible: {id: "sheep-0", text: "Sheep, column 6, row 6"}
+- swipe:
+    from: {id: "paddock"}
+    direction: UP
+- extendedWaitUntil:
+    # The label spans two lines, so match across the newline.
+    visible: {id: "field-failed", text: 'Flowers trampled[\s\S]*'}
+    timeout: 3000
+- assertNotVisible: {id: "field-hint"}
+- assertVisible: {id: "cell-5-4", text: "trampled flowerbed, column 6, row 5"}
+- assertVisible: {id: "sheep-0", text: "Sheep, column 6, row 5"}
+- assertVisible: {id: "moves-count", text: "2"}
+- assertVisible: {id: "undo-button", enabled: true}
+- assertVisible: {id: "restart-button", enabled: true}
+- assertVisible: {id: "controls"}
+- takeScreenshot: flowerbed-failed
+
+# 3. AC5: a swipe after the fail is ignored.
+- swipe:
+    from: {id: "paddock"}
+    direction: LEFT
+- waitForAnimationToEnd
+- assertVisible: {id: "moves-count", text: "2"}
+- assertVisible: {id: "sheep-0", text: "Sheep, column 6, row 5"}
+- assertVisible: {id: "field-failed"}
+
+# 4. AC11: Undo takes back the fatal run; the field accepts swipes again.
+- tapOn: {id: "undo-button"}
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "1"}
+    timeout: 3000
+- assertNotVisible: {id: "field-failed"}
+- assertVisible: {id: "field-hint"}
+- assertVisible: {id: "sheep-0", text: "Sheep, column 6, row 6"}
+- assertVisible: {id: "cell-5-4", text: "flowerbed, column 6, row 5"}
+- assertVisible: {id: "undo-button", enabled: true}
+- takeScreenshot: flowerbed-after-undo
+- swipe:
+    from: {id: "paddock"}
+    direction: LEFT
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "2"}
+    timeout: 3000
+- assertVisible: {id: "sheep-0", text: "Sheep, column 5, row 6"}
+
+# 5. AC13: fail again, then Restart from the failed state.
+- swipe:
+    from: {id: "paddock"}
+    direction: RIGHT
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "3"}
+    timeout: 3000
+- swipe:
+    from: {id: "paddock"}
+    direction: UP
+- extendedWaitUntil:
+    visible: {id: "field-failed"}
+    timeout: 3000
+- assertVisible: {id: "moves-count", text: "4"}
+- tapOn: {id: "restart-button"}
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "0"}
+    timeout: 3000
+- assertVisible: {id: "sheep-0", text: "Sheep, column 5, row 6"}
+- assertVisible: {id: "cell-5-4", text: "flowerbed, column 6, row 5"}
+- assertNotVisible: {id: "field-failed"}
+- assertVisible: {id: "field-hint"}
+- assertVisible: {id: "undo-button", enabled: false}
+- assertVisible: {id: "restart-button", enabled: false}
+- assertVisible: {id: "controls"}
+- assertVisible: {id: "cell-5-5"}
+- takeScreenshot: flowerbed-after-restart

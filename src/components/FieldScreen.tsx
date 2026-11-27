@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useReducer, useRef, useState } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import type { TouchData } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,8 +23,10 @@ interface Props {
 
 /**
  * Field screen, layout Option A: title row, stats strip, paddock (swipe area with
- * the board centred), hint. State logic lives in the pure session reducer; this
- * component only renders it and forwards swipes.
+ * the board centred), hint, then the Undo / Restart bar. State logic lives in the
+ * pure session reducer; this component only renders it and forwards swipes and
+ * button presses. The bar sits outside the GestureDetector, so a button press is
+ * never seen by the pan and never becomes a swipe.
  */
 export function FieldScreen({ level, index }: Props) {
   const insets = useSafeAreaInsets();
@@ -33,6 +35,10 @@ export function FieldScreen({ level, index }: Props) {
 
   const board = useMemo(() => buildBoardView(session.game), [session.game]);
   const cleared = isCleared(session.game);
+  // The fail message waits for the fatal run to finish, so the player sees the
+  // sheep reach the flowerbed first.
+  const showFailed = session.game.failed && session.run === null;
+  const canStepBack = session.history.length > 0;
   const cell = area ? cellSize(area.w, area.h, board.width, board.height) : 0;
 
   const onLayout = useCallback((e: LayoutChangeEvent) => {
@@ -41,6 +47,8 @@ export function FieldScreen({ level, index }: Props) {
   }, []);
 
   const onRunEnd = useCallback((runId: number) => dispatch({ type: 'runEnd', runId }), []);
+  const onUndo = useCallback(() => dispatch({ type: 'undo' }), []);
+  const onRestart = useCallback(() => dispatch({ type: 'restart' }), []);
 
   // Every finger on the pan is tracked by its touch id, from where it touched down
   // to its last reported position, in window coordinates. The swipe is the finger
@@ -144,17 +152,55 @@ export function FieldScreen({ level, index }: Props) {
           <Text testID="field-cleared" style={[styles.hint, styles.cleared]}>
             Field cleared
           </Text>
+        ) : showFailed ? (
+          <Text testID="field-failed" style={styles.hint}>
+            <Text style={styles.failedTitle}>Flowers trampled</Text>
+            {'\nUndo that run or restart the field.'}
+          </Text>
         ) : (
           <Text testID="field-hint" style={styles.hint}>
             {level.hint}
           </Text>
         )}
       </View>
+
+      <View testID="controls" style={styles.controls}>
+        <Pressable
+          testID="undo-button"
+          accessibilityRole="button"
+          accessibilityLabel="Undo"
+          accessibilityState={{ disabled: !canStepBack }}
+          disabled={!canStepBack}
+          onPress={onUndo}
+          style={[
+            styles.button,
+            showFailed && styles.buttonPrimary,
+            !canStepBack && styles.buttonDisabled,
+          ]}
+        >
+          <Text style={[styles.buttonText, showFailed && styles.buttonTextPrimary]}>Undo</Text>
+        </Pressable>
+        <Pressable
+          testID="restart-button"
+          accessibilityRole="button"
+          accessibilityLabel="Restart field"
+          accessibilityState={{ disabled: !canStepBack }}
+          disabled={!canStepBack}
+          onPress={onRestart}
+          style={[styles.button, !canStepBack && styles.buttonDisabled]}
+        >
+          <Text style={styles.buttonText}>Restart</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const HINT_LINE = 20;
+/** At least the 44 pt minimum touch target (AC14); the prototype's `.btn` height. */
+const BUTTON_HEIGHT = 48;
+/** Prototype `.controls .btn` background. */
+const BUTTON_BG = '#1f4d41';
 
 const styles = StyleSheet.create({
   root: {
@@ -222,5 +268,35 @@ const styles = StyleSheet.create({
   cleared: {
     color: palette.butter,
     fontWeight: '700',
+  },
+  failedTitle: {
+    color: palette.butter,
+    fontWeight: '700',
+  },
+  controls: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  button: {
+    flex: 1,
+    height: BUTTON_HEIGHT,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: BUTTON_BG,
+  },
+  buttonPrimary: {
+    backgroundColor: palette.butter,
+  },
+  buttonDisabled: {
+    opacity: 0.45,
+  },
+  buttonText: {
+    color: palette.wool,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  buttonTextPrimary: {
+    color: palette.ink,
   },
 });

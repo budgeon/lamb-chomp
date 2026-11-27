@@ -61,9 +61,11 @@ const FIELD1 = LEVELS[0];
 interface Probe {
   session: Session | null;
   send: ((a: SessionAction) => void) | null;
+  /** Every run id Sheep reported through onRunEnd, in order. */
+  ends: number[];
 }
 /** Latest committed session and its dispatch, written after each render. */
-const probe: Probe = { session: null, send: null };
+const probe: Probe = { session: null, send: null, ends: [] };
 
 function Harness({ cell, showBoard }: { cell: number; showBoard: boolean }) {
   const [session, dispatch] = useReducer(sessionReducer, FIELD1, initialSession);
@@ -72,7 +74,10 @@ function Harness({ cell, showBoard }: { cell: number; showBoard: boolean }) {
     probe.send = dispatch;
   });
   // Stable, as in FieldScreen (useCallback over dispatch).
-  const onRunEnd = useCallback((runId: number) => dispatch({ type: 'runEnd', runId }), []);
+  const onRunEnd = useCallback((runId: number) => {
+    probe.ends.push(runId);
+    dispatch({ type: 'runEnd', runId });
+  }, []);
   return showBoard ? (
     <Board board={buildBoardView(session.game)} cell={cell} run={session.run} onRunEnd={onRunEnd} />
   ) : null;
@@ -100,6 +105,7 @@ beforeEach(async () => {
   jest.useFakeTimers();
   probe.session = null;
   probe.send = null;
+  probe.ends = [];
   root = createRoot();
   await render(40);
 });
@@ -160,4 +166,35 @@ describe('Sheep run end clears the busy state (sheep-busy-cancel)', () => {
     await send({ type: 'swipe', sheep: 0, dir: 'left' });
     expect(latest().game.moves).toBe(moves + 1);
   });
+
+  // Undo and restart cancel the run in the reducer (run and queued become null).
+  // Sheep's effect then snaps to the committed cell, which cancels the running
+  // withTiming; its callback still reports runEnd for the cancelled run, and the
+  // reducer must ignore that stale id.
+  it.each(['undo', 'restart'] as const)(
+    '%s mid-run with a queued swipe cancels the run; the stale runEnd is ignored and the next swipe moves',
+    async (type) => {
+      const run = await startRun();
+      await flush(STEP_MS / 2);
+      await send({ type: 'swipe', sheep: 0, dir: 'left' });
+      expect(latest().queued).toBe('left');
+
+      await send({ type });
+      expect(latest().run).toBeNull();
+      expect(latest().queued).toBeNull();
+      expect(latest().game.moves).toBe(0);
+      const after = latest();
+
+      await flush(); // no time passes: only the cancel callback can report
+      expect(probe.ends).toContain(run.id);
+      expect(latest()).toBe(after);
+
+      await send({ type: 'swipe', sheep: 0, dir: 'left' });
+      expect(latest().game.moves).toBe(1);
+      const next = latest().run!;
+      expect(next.id).not.toBe(run.id);
+      await flush(next.cells * STEP_MS + 100);
+      expect(latest().run).toBeNull();
+    },
+  );
 });

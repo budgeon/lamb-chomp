@@ -18,5 +18,11 @@ export const palette = {
   mud: '#5a3b28',
   rock: '#929a9e',
   petal: '#f58aae',
+  /** Trampled flowerbed (not in the prototype palette): a crushed-petal tile tint, */
+  trampled: '#c98196',
+  trampledAlt: '#c07a8f',
+  /** ...with darker and pale petal fragments (pale is the prototype's `#fff6f9`). */
+  petalTrampled: '#9c4a68',
+  petalPale: '#fff6f9',
   sheepFace: '#2b2826',
 } as const;
