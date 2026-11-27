@@ -30,9 +30,14 @@ The board edge is a fence and stops a run like a rock.
 
 ## Scoring
 
-- Par is the minimum number of moves, computed by breadth-first search over (sheep positions, grass state).
-- Three stars at par or better, two stars within par + 2, one star otherwise.
-- The best star result per field is kept.
+- Par is the minimum number of moves, computed by breadth-first search over (sheep positions, grass state). On screen it is called **Shepherd's best**; code and level data keep `par` (D7).
+- Rating, with `best` = par and `moves` = moves used to clear the field (D7):
+  - exactly `best`: three stars plus the shepherd's best badge;
+  - up to `best + max(1, ceil(0.15 × best))`: three stars;
+  - up to `best + max(3, ceil(0.40 × best))`: two stars;
+  - any other clear: one star.
+- Undo and solver hints do not affect the rating; only the final move count counts.
+- The best result per field is kept: the star count and whether the badge was earned.
 
 ## Level format
 

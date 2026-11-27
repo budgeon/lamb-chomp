@@ -2,6 +2,39 @@
 
 Newest first. Each entry says what was decided, why, and what is still open.
 
+## D7. Shepherd's best and the star tiers
+
+- **Date:** 27 Nov 2026
+- **Status:** Decided by the owner. Replaces the star rule in D2's "stars against par".
+- **Decision:**
+  - **Name.** On screen, par is called **Shepherd's best**: the true minimum number of moves, found by breadth-first search. Code, level data and tools keep the name `par`.
+  - **Rating.** With `best` = the shepherd's best and `moves` = the moves used to clear:
+
+    | Result | Condition |
+    |---|---|
+    | 3 stars and the **shepherd's best badge** | `moves == best` |
+    | 3 stars | `moves <= best + max(1, ceil(0.15 × best))` |
+    | 2 stars | `moves <= best + max(3, ceil(0.40 × best))` |
+    | 1 star | any clear |
+
+    For example, best 5: 3★ at 6, 2★ at 7–8. Best 9: 3★ at 10–11, 2★ at 12–13. Best 14: 3★ at 15–17, 2★ at 18–20.
+
+    Compute the margins in integers, as `ceil(15 × best / 100)` and `ceil(40 × best / 100)`. In floating point `0.15 × 20` is `3.0000000000000004`, which would round up to 4 instead of 3.
+  - **Badge.** The badge (for example a golden crook) is separate from the stars, so the familiar 3-star scale stays. The best result per field is kept: its star count, and whether the badge was earned.
+  - **Undo and hints are free.** The rating depends only on the final move count. Undo restores the move count, and a field cleared with a solver hint can still earn 3 stars and the badge.
+  - **Coins.** Reaching the shepherd's best pays a small extra bonus on top of the 3-star bonus, once per field. A replay that first reaches it pays the bonus as an upgrade, in line with `replay: 'star-upgrade-only'`.
+- **Why:**
+  - A fixed par + 2 was harsh on short fields and loose on long ones; margins that scale with the field are fairer as fields grow toward 100.
+  - Making the exact minimum a separate badge gives expert players a goal without making 3 stars feel out of reach.
+  - Undo is a thinking tool in a puzzle game, so it should not cost stars.
+- **Still to do:** in the progression feature, with the `rules`, `ui`, `economy` and `save` flags:
+  - add the rating function to the pure module with tests (boundary cases at each tier);
+  - rename the on-screen PAR label;
+  - show the targets on screen, since scaled margins need explaining;
+  - store the best stars and badge per field;
+  - add and tune the bonus in `src/economy/config.ts`, so the economy gate's balance simulation still passes.
+- **Known consequence:** hints and undo can hand out 3 stars and the badge, so coin rewards must stay once per field. That was already the rule.
+
 ## D6. Business model: free, ad-light, with coins and cosmetics
 
 - **Date:** 25 Nov 2026
