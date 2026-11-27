@@ -12,7 +12,7 @@ Write `.delivery/plan.md` with:
 
 1. **Approach:** the simplest design that fits existing patterns, and why. Keep rules logic in the pure `src/game/` module and rendering in components.
 2. **Shared contracts:** types, persisted shapes, and schema versions that tasks depend on
-3. **Tasks:** ID, goal, files, `depends_on`, `parallel_safe` (yes only with no file overlap), AC IDs satisfied, tests to add
+3. **Tasks:** ID, goal, files, `depends_on`, `parallel_safe` (yes only with no file overlap), AC IDs satisfied, tests to add, and a removal proof for each guarding test: the code to remove and the failure expected. Remove code that produces the behaviour the AC describes, so removing it breaks that behaviour. Don't pick a redundant guard or a duplicate check: if the behaviour survives its removal, the test still passes and nothing is proved.
 4. **Risk coverage:** for each flag, the required checks from the risks file and which task or test covers them
 5. **Test budget:** rules and edge cases in Jest (with fast-check for properties); Maestro covers player journeys, about one flow per journey, usually no more than 5 new flows. Name each planned flow and where it goes in `.maestro/`.
 6. **Native impact:** JS-only or needs a new native build; packages to add with `npx expo install`

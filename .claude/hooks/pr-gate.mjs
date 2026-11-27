@@ -8,6 +8,9 @@
  *   both have a line `Commit: <sha>` equal to `git rev-parse HEAD`
  *   the working tree is clean
  *
+ * Mentions inside quoted strings or heredoc bodies (a commit message, say) are
+ * ignored, unless the command runs a string as shell code (`bash -c`, `eval`).
+ *
  * Exit 2 blocks the tool call (stderr goes to Claude); exit 0 allows.
  * Bypass for non-feature PRs: LAMBCHOMP_ALLOW_UNGATED_PR=1 (prints a warning).
  */
@@ -16,6 +19,20 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const PR_CREATE = /\bgh\s+pr\s+(create|new)\b/;
+const SHELL_STRING = /\b(?:ba|z|da)?sh\s+-\w*c\b|\beval\b/;
+
+/**
+ * The command with heredoc bodies and quoted strings blanked out, so text that
+ * only mentions `gh pr create` (a commit message, a file written with a heredoc)
+ * does not trip the gate. When the command runs a string as shell code
+ * (`bash -c "…"`, `eval`), strings are kept: they may be the real command.
+ */
+function codeOnly(cmd) {
+  if (SHELL_STRING.test(cmd)) return cmd;
+  return cmd
+    .replace(/(?<!<)<<-?[ \t]*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*(?=\n|$|\))/g, '<<HEREDOC')
+    .replace(/'[^']*'|"(?:\\[\s\S]|[^"\\])*"/g, "''");
+}
 
 let raw = '';
 try {
@@ -32,7 +49,7 @@ try {
 }
 
 const command = input?.tool_input?.command;
-if (input?.tool_name !== 'Bash' || typeof command !== 'string' || !PR_CREATE.test(command)) {
+if (input?.tool_name !== 'Bash' || typeof command !== 'string' || !PR_CREATE.test(codeOnly(command))) {
   process.exit(0);
 }
 

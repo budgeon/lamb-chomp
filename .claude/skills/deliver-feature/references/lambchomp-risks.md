@@ -22,6 +22,7 @@ Adds or changes anything in `src/game/levels/`, the level format, or the solver.
 Touches screens, components, gestures, animation, haptics, sound, or layout.
 - Maestro flows and screenshots on iPhone SE (smallest supported screen) and the current Pro Max simulator. Check clipping, safe areas, notch/Dynamic Island, and that the paddock fits without scrolling.
 - Swipe feel: short and fast swipes register, a blocked swipe gives feedback, the one-swipe input buffer still works, two-sheep selection by tap or swipe-start works.
+- Swipe threshold on the device: when a change touches gesture handling, a Maestro flow must swipe just under the threshold (ignored) and just over it (threshold + 1 to 8 pt, a move) on both simulators. Jest with a mocked gesture cannot catch Gesture Handler's own activation behaviour. In the field-one-swipe run, Jest passed while swipes under about 33 pt were dropped on the device, because pan translation resets when the pan activates.
 - 60fps sanity: run animations on the UI thread (Reanimated worklets or Skia), not via JS-thread `setState` per frame. Check with the Perf Monitor in a Debug build; a device feel check is `MANUAL`.
 - For a visible layout change, the spec offers two or three options with a recommendation.
 
