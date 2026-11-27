@@ -2,6 +2,7 @@ import { useCallback, useMemo, useReducer, useRef, useState } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
+import type { TouchData } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isCleared } from '../game';
@@ -41,30 +42,65 @@ export function FieldScreen({ level, index }: Props) {
 
   const onRunEnd = useCallback((runId: number) => dispatch({ type: 'runEnd', runId }), []);
 
-  // Where the finger touched down, in window coordinates. The swipe is measured
-  // from here to the lift point. Not from e.translationX/Y: on iOS, RNGH resets
-  // the translation to zero when the pan activates at minDistance, which would
-  // drop the first 16 pt and measure from the activation point (verify F1).
-  const touchStart = useRef<Point | null>(null);
+  // Every finger on the pan is tracked by its touch id, from where it touched down
+  // to its last reported position, in window coordinates. The swipe is the finger
+  // that moved furthest, chosen when the pan ends, so a resting finger or palm
+  // (down first or later) never decides the direction. Not from the pan's
+  // e.absoluteX/Y: RNGH reports that as the centroid of every finger, so a second
+  // finger would drag the end point toward itself. Not from e.translationX/Y
+  // either: on iOS, RNGH resets the translation to zero when the pan activates at
+  // minDistance, dropping the first 16 pt (verify F1).
+  // `tracks` is in touch-down order. `activeTrack` maps the id of a finger still
+  // down to its track; a lifted finger leaves the map, so a later finger that
+  // reuses its id (iOS and Android both reuse ids) starts a new track.
+  const tracks = useRef<{ start: Point; last: Point }[]>([]);
+  const activeTrack = useRef(new Map<number, number>());
 
-  // Callbacks run on the JS thread, in order. onBegin fires at touch-down;
-  // onDeactivate fires once per activated pan, when the finger lifts. There is no
-  // selection UI yet, so the swipe goes to sheep 0 (spec section 4).
+  const updateTracks = (touches: TouchData[]) => {
+    for (const t of touches) {
+      const i = activeTrack.current.get(t.id);
+      if (i !== undefined) tracks.current[i].last = { x: t.absoluteX, y: t.absoluteY };
+    }
+  };
+
+  // Callbacks run on the JS thread, in order. onDeactivate fires once per activated
+  // pan, when the fingers lift. There is no selection UI yet, so the swipe goes to
+  // sheep 0 (spec section 4).
   const pan = usePanGesture({
     // Only gates activation (16 pt from touch-down), so taps never become pans.
     minDistance: SWIPE_MIN_DISTANCE,
     runOnJS: true,
-    onBegin: (e) => {
-      touchStart.current = { x: e.absoluteX, y: e.absoluteY };
+    onTouchesDown: (e) => {
+      for (const t of e.changedTouches) {
+        const p = { x: t.absoluteX, y: t.absoluteY };
+        activeTrack.current.set(t.id, tracks.current.length);
+        tracks.current.push({ start: p, last: p });
+      }
+    },
+    onTouchesMove: (e) => updateTracks(e.allTouches),
+    onTouchesUp: (e) => {
+      updateTracks(e.changedTouches);
+      for (const t of e.changedTouches) activeTrack.current.delete(t.id);
     },
     onDeactivate: (e) => {
-      const start = touchStart.current;
-      if (e.canceled || !start) return;
-      const dir = swipeBetween(start, { x: e.absoluteX, y: e.absoluteY });
+      if (e.canceled) return;
+      // Largest displacement wins; on a tie the earlier touch-down wins.
+      let best: { start: Point; last: Point } | null = null;
+      let bestDist = -1;
+      for (const track of tracks.current) {
+        const d = Math.hypot(track.last.x - track.start.x, track.last.y - track.start.y);
+        if (d > bestDist) {
+          best = track;
+          bestDist = d;
+        }
+      }
+      if (!best) return;
+      const dir = swipeBetween(best.start, best.last);
       if (dir) dispatch({ type: 'swipe', sheep: 0, dir });
     },
     onFinalize: () => {
-      touchStart.current = null;
+      tracks.current = [];
+      activeTrack.current.clear();
     },
   });
 
