@@ -2,6 +2,7 @@ import { useCallback, useMemo, useReducer, useRef, useState } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
+import type { TouchData } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isCleared } from '../game';
@@ -41,30 +42,56 @@ export function FieldScreen({ level, index }: Props) {
 
   const onRunEnd = useCallback((runId: number) => dispatch({ type: 'runEnd', runId }), []);
 
-  // Where the finger touched down, in window coordinates. The swipe is measured
-  // from here to the lift point. Not from e.translationX/Y: on iOS, RNGH resets
-  // the translation to zero when the pan activates at minDistance, which would
-  // drop the first 16 pt and measure from the activation point (verify F1).
+  // The swipe is measured on the first finger only, tracked by its touch id, from
+  // where it touched down to its last reported position, in window coordinates.
+  // Not from the pan's e.absoluteX/Y: RNGH reports that as the centroid of every
+  // finger on the pan, so a second finger would drag the end point toward itself.
+  // Not from e.translationX/Y either: on iOS, RNGH resets the translation to zero
+  // when the pan activates at minDistance, dropping the first 16 pt (verify F1).
+  const pointerId = useRef<number | null>(null);
   const touchStart = useRef<Point | null>(null);
+  const touchLast = useRef<Point | null>(null);
+  // Set once the first finger lifts, so a later finger that reuses its id (Android
+  // reuses pointer ids) cannot move the end point.
+  const firstLifted = useRef(false);
 
-  // Callbacks run on the JS thread, in order. onBegin fires at touch-down;
-  // onDeactivate fires once per activated pan, when the finger lifts. There is no
-  // selection UI yet, so the swipe goes to sheep 0 (spec section 4).
+  const trackFirstFinger = (touches: TouchData[]) => {
+    if (firstLifted.current) return;
+    const t = touches.find((touch) => touch.id === pointerId.current);
+    if (t) touchLast.current = { x: t.absoluteX, y: t.absoluteY };
+  };
+
+  // Callbacks run on the JS thread, in order. onDeactivate fires once per activated
+  // pan, when the fingers lift. There is no selection UI yet, so the swipe goes to
+  // sheep 0 (spec section 4).
   const pan = usePanGesture({
     // Only gates activation (16 pt from touch-down), so taps never become pans.
     minDistance: SWIPE_MIN_DISTANCE,
     runOnJS: true,
-    onBegin: (e) => {
-      touchStart.current = { x: e.absoluteX, y: e.absoluteY };
+    onTouchesDown: (e) => {
+      const first = e.changedTouches[0];
+      if (pointerId.current !== null || !first) return;
+      pointerId.current = first.id;
+      touchStart.current = { x: first.absoluteX, y: first.absoluteY };
+      touchLast.current = touchStart.current;
+    },
+    onTouchesMove: (e) => trackFirstFinger(e.allTouches),
+    onTouchesUp: (e) => {
+      trackFirstFinger(e.changedTouches);
+      if (e.changedTouches.some((touch) => touch.id === pointerId.current)) firstLifted.current = true;
     },
     onDeactivate: (e) => {
       const start = touchStart.current;
-      if (e.canceled || !start) return;
-      const dir = swipeBetween(start, { x: e.absoluteX, y: e.absoluteY });
+      const end = touchLast.current;
+      if (e.canceled || !start || !end) return;
+      const dir = swipeBetween(start, end);
       if (dir) dispatch({ type: 'swipe', sheep: 0, dir });
     },
     onFinalize: () => {
+      pointerId.current = null;
       touchStart.current = null;
+      touchLast.current = null;
+      firstLifted.current = false;
     },
   });
 
