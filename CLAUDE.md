@@ -21,7 +21,7 @@ This file carries the context from the planning session (10–13 Nov 2026) in wh
 - Entering a flowerbed fails the field. The player must undo or restart.
 - Sheep start on bare soil. With two sheep, the player taps one (or starts the swipe on it) to choose it. Sheep block each other.
 - The field is cleared when no grass or tall grass remains.
-- Par is the true minimum number of moves, found by breadth-first search. Three stars at par, two at par + 2, one otherwise.
+- Par is the true minimum number of moves, found by breadth-first search. On screen it is called **Shepherd's best**. Rating (D7): exactly par earns three stars plus the shepherd's best badge; up to par + max(1, ceil(0.15 × par)) three stars; up to par + max(3, ceil(0.40 × par)) two stars; any other clear one star. Undo and hints do not affect the rating.
 
 The production implementation is the pure module in `src/game/` (`slide`, `solve`, `parseLevel`, ...). It must behave identically to the reference `slide()` in `prototype/index.html`; the parity test in `src/game/__tests__/` enforces this. Sheep are indexed in scan order (left to right, top to bottom), as in the prototype; `tools/gen.js` numbers them in placement order.
 
