@@ -20,7 +20,7 @@ maestro --device <udid> test .maestro/ --test-output-dir .delivery/evidence/maes
 maestro studio                               # inspect the view hierarchy and build selectors
 ```
 
-Against a **Debug** build, point `--test-output-dir` outside the repo. Metro watches the repo and reloads the app when new screenshot files appear, which resets the field mid-flow. Release builds don't use Metro, so this doesn't affect them. A Debug build on a non-default Metro port also needs `RCT_jsLocation` set on the simulator; see `native-verification.md`, preflight step 5.
+Against a **Debug** build, point `--test-output-dir` at `.delivery/evidence/` or outside the repo. Metro watches the repo, and a new screenshot file anywhere else in it can reload the app and reset the field mid-flow. `metro.config.js` blocks `.delivery/` from Metro. Release builds don't use Metro, so this doesn't affect them. A Debug build on a non-default Metro port also needs `RCT_jsLocation` set on the simulator; see `native-verification.md`, preflight step 5.
 
 ## Writing flows
 

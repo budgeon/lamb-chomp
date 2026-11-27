@@ -65,6 +65,18 @@ try {
     expect('no evidence blocks', run(dir, PR), 2, /verify\.md not found[\s\S]*review\.md not found/);
     expect('block names the checked directory', run(dir, PR), 2, new RegExp(`Checked: \\S*${dir.split('/').pop()}`));
     expect('block suggests entering the worktree', run(dir, PR), 2, /EnterWorktree/);
+    expect('commit message mentioning it passes through', run(dir, 'git commit -m "docs: the hook gates gh pr create"'), 0);
+    expect("single-quoted mention passes through", run(dir, "echo 'then run gh pr create'"), 0);
+    expect('heredoc body mentioning it passes through', run(dir, "cat > notes.md <<'EOF'\nrun gh pr create later\nEOF"), 0);
+    expect(
+      'real PR with a heredoc body still gated',
+      run(dir, `gh pr create --title "x" --body "$(cat <<'EOF'\nbody\nEOF\n)"`),
+      2,
+      /verify\.md not found/,
+    );
+    expect('PR after a quoted commit still gated', run(dir, `git commit -m "wip" && ${PR}`), 2, /verify\.md not found/);
+    expect('PR inside bash -c still gated', run(dir, `bash -c "${PR.replace(/"/g, "'")}"`), 2, /verify\.md not found/);
+    expect('PR inside eval still gated', run(dir, `eval "gh pr create --fill"`), 2, /verify\.md not found/);
   }
   {
     const { dir, head } = repo();
