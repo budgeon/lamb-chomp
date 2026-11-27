@@ -4,16 +4,18 @@
  *
  * React Native Gesture Handler reports `absoluteX/absoluteY` as the centroid of all
  * pointers on the pan (iOS: UIKit `locationInView:`; Android: `lastAbsolutePositionX`
- * averages every pointer). FieldScreen measures the swipe from the `onBegin` absolute
- * position to the `onDeactivate` absolute position, so a second pointer moves the end
- * point toward itself.
+ * averages every pointer). FieldScreen used to measure the swipe from the `onBegin`
+ * absolute position to the `onDeactivate` absolute position, so a second pointer moved
+ * the end point toward itself. It now tracks every finger by touch id (start and last
+ * position per finger) and, when the pan ends, measures the finger that moved furthest
+ * (ties: earliest touch-down).
  *
  * What this models: the real FieldScreen and the real RNGH v3 `usePanGesture` callback
  * pipeline, driven by RNGH's own Jest controller with events whose `absoluteX/Y` are
- * what the native handler reports when a second finger lands. The fix measures the
- * first finger by touch id, so each case also sends the per-finger touch events the
- * native handler sends (`onTouchesDown/Move/Up`), through the pan's real JS event
- * handler. RNGH's controller has no touch-event method, hence `touches()` below.
+ * what the native handler reports when a second finger lands. Each case also sends the
+ * per-finger touch events the native handler sends (`onTouchesDown/Move/Up`), through
+ * the pan's real JS event handler. RNGH's controller has no touch-event method, hence
+ * `touches()` below.
  * What it cannot model: the native recognizer itself (activation thresholds, real
  * pointer timing, the exact order of touch and state events). Activation is driven by
  * the test.
@@ -221,6 +223,51 @@ describe('FieldScreen pan with a second pointer', () => {
       );
       pan.end({ absoluteX: 220, absoluteY: 660 });
     });
+    expect(sheepLabel()).toBe(AFTER_RIGHT);
+  });
+
+  it('a finger already resting on the paddock does not capture a thumb swipe', () => {
+    const pan = createGestureController(capturedPan!);
+    act(() => {
+      // Finger 0 rests at (200, 600) first and never moves.
+      touches(TOUCHES_DOWN, [finger(0, 200, 600)], [finger(0, 200, 600)]);
+      pan.begin({ absoluteX: 200, absoluteY: 600 });
+      // The thumb (finger 1) lands at (200, 400) and swipes 40 pt right.
+      touches(TOUCHES_DOWN, [finger(1, 200, 400)], [finger(0, 200, 600), finger(1, 200, 400)]);
+      touches(TOUCHES_MOVE, [finger(1, 240, 400)], [finger(0, 200, 600), finger(1, 240, 400)]);
+      // Centroid moved 20 pt, so the pan activates.
+      pan.activate({ absoluteX: 220, absoluteY: 500 });
+      touches(
+        TOUCHES_UP,
+        [finger(0, 200, 600), finger(1, 240, 400)],
+        [finger(0, 200, 600), finger(1, 240, 400)],
+      );
+      pan.end({ absoluteX: 220, absoluteY: 500 });
+    });
+    expect(textOf('moves-count')).toBe('1');
+    expect(sheepLabel()).toBe(AFTER_RIGHT);
+  });
+
+  it('two fingers landing in one event, still one listed first, swipes with the moving one', () => {
+    const pan = createGestureController(capturedPan!);
+    act(() => {
+      // Both land in the same touch-down event; changedTouches[0] is the still one.
+      touches(
+        TOUCHES_DOWN,
+        [finger(0, 200, 600), finger(1, 200, 400)],
+        [finger(0, 200, 600), finger(1, 200, 400)],
+      );
+      pan.begin({ absoluteX: 200, absoluteY: 500 });
+      touches(TOUCHES_MOVE, [finger(1, 240, 400)], [finger(0, 200, 600), finger(1, 240, 400)]);
+      pan.activate({ absoluteX: 220, absoluteY: 500 });
+      touches(
+        TOUCHES_UP,
+        [finger(0, 200, 600), finger(1, 240, 400)],
+        [finger(0, 200, 600), finger(1, 240, 400)],
+      );
+      pan.end({ absoluteX: 220, absoluteY: 500 });
+    });
+    expect(textOf('moves-count')).toBe('1');
     expect(sheepLabel()).toBe(AFTER_RIGHT);
   });
 

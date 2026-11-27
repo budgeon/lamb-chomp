@@ -42,23 +42,25 @@ export function FieldScreen({ level, index }: Props) {
 
   const onRunEnd = useCallback((runId: number) => dispatch({ type: 'runEnd', runId }), []);
 
-  // The swipe is measured on the first finger only, tracked by its touch id, from
-  // where it touched down to its last reported position, in window coordinates.
-  // Not from the pan's e.absoluteX/Y: RNGH reports that as the centroid of every
-  // finger on the pan, so a second finger would drag the end point toward itself.
-  // Not from e.translationX/Y either: on iOS, RNGH resets the translation to zero
-  // when the pan activates at minDistance, dropping the first 16 pt (verify F1).
-  const pointerId = useRef<number | null>(null);
-  const touchStart = useRef<Point | null>(null);
-  const touchLast = useRef<Point | null>(null);
-  // Set once the first finger lifts, so a later finger that reuses its id (Android
-  // reuses pointer ids) cannot move the end point.
-  const firstLifted = useRef(false);
+  // Every finger on the pan is tracked by its touch id, from where it touched down
+  // to its last reported position, in window coordinates. The swipe is the finger
+  // that moved furthest, chosen when the pan ends, so a resting finger or palm
+  // (down first or later) never decides the direction. Not from the pan's
+  // e.absoluteX/Y: RNGH reports that as the centroid of every finger, so a second
+  // finger would drag the end point toward itself. Not from e.translationX/Y
+  // either: on iOS, RNGH resets the translation to zero when the pan activates at
+  // minDistance, dropping the first 16 pt (verify F1).
+  // `tracks` is in touch-down order. `activeTrack` maps the id of a finger still
+  // down to its track; a lifted finger leaves the map, so a later finger that
+  // reuses its id (iOS and Android both reuse ids) starts a new track.
+  const tracks = useRef<{ start: Point; last: Point }[]>([]);
+  const activeTrack = useRef(new Map<number, number>());
 
-  const trackFirstFinger = (touches: TouchData[]) => {
-    if (firstLifted.current) return;
-    const t = touches.find((touch) => touch.id === pointerId.current);
-    if (t) touchLast.current = { x: t.absoluteX, y: t.absoluteY };
+  const updateTracks = (touches: TouchData[]) => {
+    for (const t of touches) {
+      const i = activeTrack.current.get(t.id);
+      if (i !== undefined) tracks.current[i].last = { x: t.absoluteX, y: t.absoluteY };
+    }
   };
 
   // Callbacks run on the JS thread, in order. onDeactivate fires once per activated
@@ -69,29 +71,36 @@ export function FieldScreen({ level, index }: Props) {
     minDistance: SWIPE_MIN_DISTANCE,
     runOnJS: true,
     onTouchesDown: (e) => {
-      const first = e.changedTouches[0];
-      if (pointerId.current !== null || !first) return;
-      pointerId.current = first.id;
-      touchStart.current = { x: first.absoluteX, y: first.absoluteY };
-      touchLast.current = touchStart.current;
+      for (const t of e.changedTouches) {
+        const p = { x: t.absoluteX, y: t.absoluteY };
+        activeTrack.current.set(t.id, tracks.current.length);
+        tracks.current.push({ start: p, last: p });
+      }
     },
-    onTouchesMove: (e) => trackFirstFinger(e.allTouches),
+    onTouchesMove: (e) => updateTracks(e.allTouches),
     onTouchesUp: (e) => {
-      trackFirstFinger(e.changedTouches);
-      if (e.changedTouches.some((touch) => touch.id === pointerId.current)) firstLifted.current = true;
+      updateTracks(e.changedTouches);
+      for (const t of e.changedTouches) activeTrack.current.delete(t.id);
     },
     onDeactivate: (e) => {
-      const start = touchStart.current;
-      const end = touchLast.current;
-      if (e.canceled || !start || !end) return;
-      const dir = swipeBetween(start, end);
+      if (e.canceled) return;
+      // Largest displacement wins; on a tie the earlier touch-down wins.
+      let best: { start: Point; last: Point } | null = null;
+      let bestDist = -1;
+      for (const track of tracks.current) {
+        const d = Math.hypot(track.last.x - track.start.x, track.last.y - track.start.y);
+        if (d > bestDist) {
+          best = track;
+          bestDist = d;
+        }
+      }
+      if (!best) return;
+      const dir = swipeBetween(best.start, best.last);
       if (dir) dispatch({ type: 'swipe', sheep: 0, dir });
     },
     onFinalize: () => {
-      pointerId.current = null;
-      touchStart.current = null;
-      touchLast.current = null;
-      firstLifted.current = false;
+      tracks.current = [];
+      activeTrack.current.clear();
     },
   });
 

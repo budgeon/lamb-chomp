@@ -34,6 +34,9 @@ import type { Session, SessionAction } from '../../play/session';
 import { Board } from '../Board';
 
 // jest.mock calls are hoisted above the imports by babel-jest.
+// The Reanimated `src/` paths below target react-native-reanimated 4.7.1. An upgrade
+// that moves these files fails this suite with "Cannot find module", not with a
+// behaviour failure; update the paths when that happens.
 jest.mock('react-native-worklets', () => jest.requireActual('react-native-worklets/src/mock'));
 // Jest resolves `.native.ts` first; use Reanimated's single-runtime mutable,
 // which calls `valueSetter` directly (the native one does so on the UI runtime).
