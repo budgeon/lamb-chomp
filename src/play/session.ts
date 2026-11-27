@@ -11,6 +11,14 @@
  * `runEnd` with the run's id. A swipe that arrives while a run is playing is
  * stored in `queued` (the latest one wins) and applied when the run ends,
  * unless the field is over by then.
+ *
+ * Undo and restart: `history` is a stack of the committed states from before
+ * each counted move (the prototype's `S.hist`, without JSON snapshots; `State`
+ * is immutable, so the objects themselves are kept). Undo pops one, restart
+ * goes back to `start`. Both cancel the current run and drop the buffer, so a
+ * late `runEnd` for the cancelled run finds `run === null` (or a newer id) and
+ * is ignored. `nextRunId` is never reset, so a cancelled run's id can never
+ * match a later run.
  */
 import { isCleared, parseLevel, slide } from '../game';
 import type { Dir, Level, State } from '../game';
@@ -38,15 +46,23 @@ export interface Session {
   readonly run: Run | null;
   /** One-deep swipe buffer (prototype `queued`). */
   readonly queued: Dir | null;
+  /** Next run id. Only ever grows; undo and restart never reset it. */
   readonly nextRunId: number;
+  /** parseLevel(level), the target of restart. */
+  readonly start: State;
+  /** Committed states before each counted move, oldest first. Empty at start and after restart. */
+  readonly history: readonly State[];
 }
 
 export type SessionAction =
   | { type: 'swipe'; sheep: number; dir: Dir }
-  | { type: 'runEnd'; runId: number };
+  | { type: 'runEnd'; runId: number }
+  | { type: 'undo' }
+  | { type: 'restart' };
 
 export function initialSession(level: Level): Session {
-  return { game: parseLevel(level), run: null, queued: null, nextRunId: 1 };
+  const start = parseLevel(level);
+  return { game: start, run: null, queued: null, nextRunId: 1, start, history: [] };
 }
 
 /**
@@ -72,7 +88,30 @@ function applySwipe(s: Session, sheep: number, dir: Dir): Session {
     run: { id: s.nextRunId, sheep, from, to, cells: cellsBetween(s.game.width, from, to) },
     queued: null,
     nextRunId: s.nextRunId + 1,
+    start: s.start,
+    history: [...s.history, s.game],
   };
+}
+
+/** Step back one counted move. Returns `s` itself when there is nothing to undo. */
+function applyUndo(s: Session): Session {
+  if (s.history.length === 0) return s;
+  return {
+    ...s,
+    game: s.history[s.history.length - 1],
+    history: s.history.slice(0, -1),
+    run: null,
+    queued: null,
+  };
+}
+
+/**
+ * Back to the starting layout. Returns `s` itself when no move has been made
+ * (an empty history also means no run is playing).
+ */
+function applyRestart(s: Session): Session {
+  if (s.history.length === 0) return s;
+  return { ...s, game: s.start, history: [], run: null, queued: null };
 }
 
 export function sessionReducer(s: Session, a: SessionAction): Session {
@@ -88,6 +127,10 @@ export function sessionReducer(s: Session, a: SessionAction): Session {
       if (s.queued) return applySwipe(idle, sheep, s.queued);
       return idle;
     }
+    case 'undo':
+      return applyUndo(s);
+    case 'restart':
+      return applyRestart(s);
     default:
       return s;
   }

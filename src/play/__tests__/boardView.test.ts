@@ -112,6 +112,38 @@ describe('buildBoardView after a slide (AC4 twin)', () => {
   });
 });
 
+describe('buildBoardView: trampled flowerbed (AC3)', () => {
+  const level = LEVELS[4];
+  const s0 = parseLevel(level);
+  const failed = slide(slide(s0, 0, 'right').state, 0, 'up').state;
+  const view = buildBoardView(failed);
+
+  it('is built on field-05, failed by RIGHT then UP', () => {
+    expect(level.id).toBe('field-05');
+    expect(failed.failed).toBe(true);
+    expect(failed.trampled).toBe(4 * s0.width + 5);
+  });
+
+  it('shows the trampled cell with its own kind and label', () => {
+    expect(byId(view, 'cell-5-4').kind).toBe('trampled flowerbed');
+    expect(byId(view, 'cell-5-4').label).toBe('trampled flowerbed, column 6, row 5');
+  });
+
+  it('leaves every other flowerbed intact', () => {
+    expect(byId(view, 'cell-3-1').kind).toBe('flowerbed');
+    expect(byId(view, 'cell-3-1').label).toBe('flowerbed, column 4, row 2');
+    const trampled = view.cells.filter((c) => c.kind === 'trampled flowerbed');
+    expect(trampled.map((c) => c.testID)).toEqual(['cell-5-4']);
+  });
+
+  it('no shipped level starts with a trampled flowerbed', () => {
+    for (const l of LEVELS) {
+      const kinds = buildBoardView(parseLevel(l)).cells.map((c) => c.kind);
+      expect(kinds).not.toContain('trampled flowerbed');
+    }
+  });
+});
+
 describe('cellKind', () => {
   it('reads grass amount before terrain', () => {
     const s = parseLevel({ id: 't', par: 1, rows: ['GgS.', '#mf.'] });

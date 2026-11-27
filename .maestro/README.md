@@ -37,6 +37,7 @@ Against a **Debug** build, point `--test-output-dir` at `.delivery/evidence/` or
 | `smoke.yaml`: launch and render | Done (asserts `id: "app-root"`) |
 | `field-1.yaml`: open field 1, check the board against `field-01`, play the par solution `U L D R U`, assert every cell grazed and "Field cleared", a later swipe is ignored | Done (stars come later with the stars feature) |
 | `blocked-swipe.yaml`: swipe into the fence, assert no move counted; two quick swipes `U` then `L`, assert both applied; a ~8 pt swipe is ignored and a ~24 pt swipe is a move (16 pt threshold measured from touch-down) | Done (the buffer mechanism itself is guarded by Jest, `src/play/__tests__/session.test.ts`) |
-| `flowerbed-fail.yaml`: trample a flowerbed, assert fail state, undo restores | TODO |
+| `undo-restart.yaml`: field 1, both buttons disabled at launch; swipe UP, Undo restores the sheep and grass; two moves, Restart restores the starting field and disables both buttons; corners and controls on screen | Done (disabled state read with `enabled: false`) |
+| `flowerbed-fail.yaml`: open field 5 with the hidden `startField: 5` launch argument; trample the flowerbed (RIGHT, UP), assert "Flowers trampled", the trampled tile and no hint; a later swipe is ignored; Undo restores and the field accepts swipes; fail again and Restart restores the starting field | Done |
 | `two-sheep.yaml`: select each sheep by tap and by swipe start | TODO |
 | `progress-persists.yaml`: clear a field, relaunch without clearState, stars remain | TODO |
