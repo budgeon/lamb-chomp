@@ -31,6 +31,7 @@ import { createGestureController } from 'react-native-gesture-handler/jest-utils
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { LEVELS } from '../../game';
+import type { ClearOutcome } from '../../play/progress';
 import { FieldScreen } from '../FieldScreen';
 
 // Capture the pan gesture FieldScreen creates, without changing it.
@@ -106,6 +107,11 @@ function touches(eventType: number, changedTouches: TouchData[], allTouches: Tou
   });
 }
 
+/** Mount-only prop: these tests never clear the field. */
+const stubOnClear = (moves: number): ClearOutcome => {
+  throw new Error(`unexpected clear in ${moves} moves`);
+};
+
 beforeEach(() => {
   capturedPan = null;
   root = createRoot({ textComponentTypes: ['Text', 'RCTText'] });
@@ -113,7 +119,13 @@ beforeEach(() => {
     root.render(
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider initialMetrics={metrics}>
-          <FieldScreen level={LEVELS[0]} index={0} />
+          <FieldScreen
+            level={LEVELS[0]}
+            index={0}
+            best={undefined}
+            onClear={stubOnClear}
+            onOpenFields={() => {}}
+          />
         </SafeAreaProvider>
       </GestureHandlerRootView>,
     );

@@ -1,9 +1,13 @@
 /// <reference types="jest" />
 /**
- * AC17 purity guard. The play modules (session reducer, board view model,
- * layout, start-field parser) and the rules in `src/game` stay plain
+ * Purity guards (AC17, AC20). The play modules in `src/play`, the rules in
+ * `src/game` and the save logic in `src/save/progressStore.ts` stay plain
  * TypeScript: no React, React Native or Expo imports, and no timers in
  * `src/play`. Timing belongs to the components (Reanimated), not the reducer.
+ *
+ * Every non-test file under `src/play` and `src/game` is scanned, so a new
+ * module is covered without editing this test. `expo-file-system` may only be
+ * imported under `src/save/` (the save adapter, `progressFile.ts`).
  *
  * Read-only: this reads source text and adds no test to `src/game`.
  */
@@ -11,18 +15,20 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const ROOT = path.resolve(__dirname, '../../..');
-const PLAY_DIR = path.resolve(__dirname, '..');
-const GAME_DIR = path.resolve(__dirname, '../../game');
+const SRC_DIR = path.join(ROOT, 'src');
+const PLAY_DIR = path.join(SRC_DIR, 'play');
+const GAME_DIR = path.join(SRC_DIR, 'game');
+const SAVE_DIR = path.join(SRC_DIR, 'save');
+const PROGRESS_STORE = path.join(SAVE_DIR, 'progressStore.ts');
 
-const PLAY_FILES = ['session.ts', 'boardView.ts', 'layout.ts', 'startField.ts'].map((f) =>
-  path.join(PLAY_DIR, f),
-);
-
-/** Non-test source files in `src/game`, recursively (skips `__tests__` and `__testutils__`). */
-function gameFiles(dir: string): string[] {
+/** `.ts`/`.tsx` files under `dir`, recursively. With `skipTests`, skips `__tests__`, `__testutils__` and other `__` folders. */
+function sourceFiles(dir: string, skipTests: boolean): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
     const full = path.join(dir, e.name);
-    if (e.isDirectory()) return e.name.startsWith('__') ? [] : gameFiles(full);
+    if (e.isDirectory()) {
+      if (e.name === 'node_modules' || (skipTests && e.name.startsWith('__'))) return [];
+      return sourceFiles(full, skipTests);
+    }
     return /\.tsx?$/.test(e.name) ? [full] : [];
   });
 }
@@ -45,30 +51,53 @@ function specifiers(src: string): string[] {
 
 const FORBIDDEN_IMPORT = [/^react($|-native|\/)/, /^react-native-/, /^expo($|-|\/)/, /^@expo\//];
 const TIMERS = /\b(setTimeout|setInterval|requestAnimationFrame)\b/;
+const FILE_SYSTEM = /^expo-file-system($|\/)/;
 
 const rel = (f: string) => path.relative(ROOT, f);
+const base = (f: string) => path.basename(f).replace(/\.tsx?$/, '');
 
-describe('purity (AC17)', () => {
-  it('play modules and src/game import no React, React Native or Expo; play modules use no timers', () => {
-    const game = gameFiles(GAME_DIR);
-    // Guards that the sweep really reads the files it is meant to.
-    expect(game.map((f) => path.basename(f))).toEqual(expect.arrayContaining(['rules.ts', 'solver.ts']));
-    for (const f of PLAY_FILES) expect(fs.existsSync(f)).toBe(true);
+describe('purity (AC17, AC20)', () => {
+  const play = sourceFiles(PLAY_DIR, true);
+  const game = sourceFiles(GAME_DIR, true);
 
+  it('the scans read the files they are meant to', () => {
+    expect(play.map(base)).toEqual(
+      expect.arrayContaining(['session', 'boardView', 'layout', 'startField', 'progress']),
+    );
+    expect(play.some((f) => f.includes(`${path.sep}__tests__${path.sep}`))).toBe(false);
+    expect(game.map(base)).toEqual(expect.arrayContaining(['rules', 'solver', 'rating']));
+    expect(fs.existsSync(PROGRESS_STORE)).toBe(true);
+  });
+
+  it('play modules, src/game and progressStore import no React, React Native or Expo; play modules use no timers', () => {
     const badImports: string[] = [];
-    for (const f of [...PLAY_FILES, ...game]) {
+    for (const f of [...play, ...game, PROGRESS_STORE]) {
       for (const spec of specifiers(fs.readFileSync(f, 'utf8'))) {
         if (FORBIDDEN_IMPORT.some((re) => re.test(spec))) badImports.push(`${rel(f)}: '${spec}'`);
       }
     }
 
     const timers: string[] = [];
-    for (const f of PLAY_FILES) {
+    for (const f of play) {
       const m = stripComments(fs.readFileSync(f, 'utf8')).match(TIMERS);
       if (m) timers.push(`${rel(f)}: ${m[1]}`);
     }
 
     expect(badImports).toEqual([]);
     expect(timers).toEqual([]);
+  });
+
+  it('expo-file-system is imported only under src/save/', () => {
+    const candidates = [
+      ...sourceFiles(SRC_DIR, false),
+      path.join(ROOT, 'App.tsx'),
+      path.join(ROOT, 'index.ts'),
+    ];
+    const hits = candidates.filter((f) =>
+      specifiers(fs.readFileSync(f, 'utf8')).some((spec) => FILE_SYSTEM.test(spec)),
+    );
+
+    expect(hits.map(rel)).toContain(path.join('src', 'save', 'progressFile.ts'));
+    expect(hits.filter((f) => !f.startsWith(SAVE_DIR + path.sep)).map(rel)).toEqual([]);
   });
 });

@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "coins": 999,
+  "fields": {
+    "field-01": { "stars": 3, "badge": true, "bestMoves": 5, "hintsUsed": 0 }
+  },
+  "owned": ["skin-cream"]
+}

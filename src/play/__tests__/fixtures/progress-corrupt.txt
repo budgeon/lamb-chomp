@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "coins": 25,
+  "fields": {
+    "field-01": {
+      "stars": 3,
+      "bad

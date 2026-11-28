@@ -1,6 +1,9 @@
 # Journey: open field 1 on a clean install and play it to clear with the par
-# solution U L D R U. Covers spec AC1, AC2, AC3, AC4 and AC6.
-# Stars are out of scope for this change and come with the stars feature.
+# solution U L D R U. Covers spec AC1, AC2, AC3, AC4 and AC6 of the field-one
+# change, and AC4, AC5 (M) and AC19 of progression-stars: the "Shepherd's best"
+# caption, the star targets, and the cleared card's 3 stars, badge and +25 coins.
+# `star-targets` is matched on its accessibility label: on iOS the label
+# replaces the visible "3★ ≤ 6 · 2★ ≤ 8" text in the tree Maestro reads.
 appId: com.lambchomp.app
 name: Field 1 - play the par solution to clear
 tags:
@@ -17,6 +20,14 @@ tags:
 - assertVisible: {id: "field-title", text: "Field 1"}
 - assertVisible: {id: "moves-count", text: "0"}
 - assertVisible: {id: "par-value", text: "5"}
+# Progression AC4 and AC5: the caption reads "Shepherd's best", never "PAR", and
+# the targets line shows the D7 limits for par 5.
+- assertVisible: {id: "par-caption", text: "SHEPHERD'S BEST"}
+- assertNotVisible: {text: "PAR"}
+- assertVisible:
+    id: "star-targets"
+    text: "Three stars in 6 moves or fewer, two stars in 8 or fewer"
+- assertNotVisible: {id: "field-best"}
 - assertVisible: {id: "field-hint"}
 - takeScreenshot: field1-launch
 
@@ -85,6 +96,15 @@ tags:
 - assertVisible: {id: "cell-4-4", text: "soil, column 5, row 5"}
 - assertVisible: {id: "cell-4-0", text: "soil, column 5, row 1"}
 - assertVisible: {id: "cell-4-1", text: "soil, column 5, row 2"}
+# Progression AC19: the cleared card (drawn over the lower paddock rows, which
+# the cell checks above still find) shows 3 stars, the badge and +25 coins.
+- assertVisible: {id: "cleared-card"}
+- assertVisible: {id: "clear-stars", text: "3 of 3 stars"}
+- assertVisible: {id: "clear-badge"}
+- assertVisible: {id: "clear-coins", text: "+25 coins"}
+- assertVisible: {id: "next-field-button"}
+- assertVisible: {id: "clear-fields-button"}
+- assertVisible: {id: "controls"}
 - takeScreenshot: field1-cleared
 
 # A swipe after clearing is ignored: the move count stays at 5.

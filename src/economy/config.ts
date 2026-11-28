@@ -44,6 +44,12 @@ export interface EarnRules {
    * earns nothing and every coin stays tied to progress.
    */
   replay: 'star-upgrade-only';
+  /**
+   * Extra coins for the shepherd's best badge (a clear in exactly par moves,
+   * D7). Paid once per field: on a first clear that earns the badge, or as a
+   * replay upgrade the first time the badge is earned.
+   */
+  shepherdsBestBonus: number;
   /** One-off bonus for clearing every field in a world. */
   worldCompleteBonus: number;
 }
@@ -53,6 +59,12 @@ export interface SimulationProfile {
   worldSizes: number[];
   /** Repeating star pattern for a typical player on first clear. */
   starPattern: Stars[];
+  /**
+   * Whether the typical player earns the shepherd's best badge on each clear,
+   * lined up index by index with `starPattern` (same length; a badge only on
+   * a 3-star entry).
+   */
+  badgePattern: boolean[];
 }
 
 export interface EconomyThresholds {
@@ -75,6 +87,7 @@ export const ECONOMY: EconomyConfig = {
     firstClearBase: 10, // TODO-tune
     starBonus: { 1: 0, 2: 5, 3: 10 }, // TODO-tune
     replay: 'star-upgrade-only',
+    shepherdsBestBonus: 5, // TODO-tune
     worldCompleteBonus: 50, // TODO-tune
   },
 
@@ -97,6 +110,7 @@ export const ECONOMY: EconomyConfig = {
   simulation: {
     worldSizes: [15, 16, 17, 17, 17, 18], // TODO-tune with the real level plan
     starPattern: [3, 2, 1, 2], // averages 2 stars
+    badgePattern: [true, false, false, false], // the 3-star clear is at par
   },
 
   thresholds: {

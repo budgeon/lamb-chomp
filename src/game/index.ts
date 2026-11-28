@@ -3,3 +3,5 @@ export { parseLevel, slide, isCleared, grassRemaining, validateLevel, DIRS, LEGE
 export { solve } from './solver';
 export type { SolveResult } from './solver';
 export { LEVELS } from './levels';
+export { starLimits, rateClear } from './rating';
+export type { Rating, StarCount } from './rating';

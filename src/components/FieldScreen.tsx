@@ -1,24 +1,38 @@
-import { useCallback, useMemo, useReducer, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import type { TouchData } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { isCleared } from '../game';
-import type { Level } from '../game';
+import { isCleared, starLimits } from '../game';
+import type { Level, State } from '../game';
 import { SWIPE_MIN_DISTANCE, swipeBetween } from '../input/swipe';
 import type { Point } from '../input/swipe';
 import { buildBoardView } from '../play/boardView';
 import { cellSize } from '../play/layout';
+import type { ClearOutcome, FieldBest } from '../play/progress';
 import { initialSession, sessionReducer } from '../play/session';
 import { palette } from '../theme/palette';
 import { Board } from './Board';
+import { ClearedCard, starGlyphs } from './ClearedCard';
 
 interface Props {
   level: Level;
   /** Position of the level in LEVELS (0-based), shown as "Field {index + 1}". */
   index: number;
+  /** This field's saved best, shown as `field-best`; undefined until it is cleared. */
+  best: FieldBest | undefined;
+  /**
+   * Records a clear in `moves` moves and returns its outcome (App: recordClear and
+   * save). Called once per clearing state, when the final run has ended.
+   */
+  onClear: (moves: number) => ClearOutcome;
+  /** Opens the next field. Undefined on the last field. */
+  onNext?: () => void;
+  onOpenFields: () => void;
+  /** False while the field list covers this screen: swipes are then ignored. */
+  active?: boolean;
 }
 
 /**
@@ -28,7 +42,15 @@ interface Props {
  * button presses. The bar sits outside the GestureDetector, so a button press is
  * never seen by the pan and never becomes a swipe.
  */
-export function FieldScreen({ level, index }: Props) {
+export function FieldScreen({
+  level,
+  index,
+  best,
+  onClear,
+  onNext,
+  onOpenFields,
+  active = true,
+}: Props) {
   const insets = useSafeAreaInsets();
   const [session, dispatch] = useReducer(sessionReducer, level, initialSession);
   const [area, setArea] = useState<{ w: number; h: number } | null>(null);
@@ -39,6 +61,23 @@ export function FieldScreen({ level, index }: Props) {
   // sheep reach the flowerbed first.
   const showFailed = session.game.failed && session.run === null;
   const canStepBack = session.history.length > 0;
+  // A clear counts once its final run has ended (the same timing as the fail
+  // message), so an Undo during that run never pays for a clear the player didn't
+  // see. The ref holds the State last recorded: each clearing State is recorded
+  // exactly once, even when this effect runs again because App passed a new
+  // `onClear` after saving. An undo and re-clear makes a new State through
+  // `slide`, so it is recorded again, and recordClear pays only an improvement.
+  const clearDone = cleared && session.run === null;
+  const recordedFor = useRef<State | null>(null);
+  const [outcome, setOutcome] = useState<ClearOutcome | null>(null);
+  // A layout effect, so the card never paints a previous clear's outcome.
+  useLayoutEffect(() => {
+    if (!clearDone || recordedFor.current === session.game) return;
+    recordedFor.current = session.game;
+    setOutcome(onClear(session.game.moves));
+  }, [clearDone, session.game, onClear]);
+  const showCard = cleared && session.run === null && outcome !== null;
+  const limits = starLimits(level.par);
   const cell = area ? cellSize(area.w, area.h, board.width, board.height) : 0;
 
   const onLayout = useCallback((e: LayoutChangeEvent) => {
@@ -104,7 +143,9 @@ export function FieldScreen({ level, index }: Props) {
       }
       if (!best) return;
       const dir = swipeBetween(best.start, best.last);
-      if (dir) dispatch({ type: 'swipe', sheep: 0, dir });
+      // `active` is false while the field list covers the screen (defence in
+      // depth: the list's own hit-testing already keeps touches off the paddock).
+      if (dir && active) dispatch({ type: 'swipe', sheep: 0, dir });
     },
     onFinalize: () => {
       tracks.current = [];
@@ -119,9 +160,18 @@ export function FieldScreen({ level, index }: Props) {
     >
       <View style={styles.top}>
         <Text style={styles.title}>Lamb Chomp</Text>
-        <Text testID="field-title" style={styles.field}>
-          {`Field ${index + 1}`}
-        </Text>
+        <Pressable
+          testID="fields-button"
+          accessibilityRole="button"
+          accessibilityLabel={`Fields, Field ${index + 1}`}
+          onPress={onOpenFields}
+          style={styles.fieldsButton}
+        >
+          <Text testID="field-title" style={styles.field}>
+            {`Field ${index + 1}`}
+          </Text>
+          <Text style={[styles.field, styles.chevron]}>›</Text>
+        </Pressable>
       </View>
 
       <View style={styles.strip}>
@@ -135,8 +185,31 @@ export function FieldScreen({ level, index }: Props) {
           <Text testID="par-value" style={styles.statValue}>
             {String(level.par)}
           </Text>
-          <Text style={styles.statCaption}>PAR</Text>
+          <Text testID="par-caption" style={styles.statCaption} numberOfLines={1}>
+            SHEPHERD&apos;S BEST
+          </Text>
         </View>
+      </View>
+
+      <View style={styles.subStrip}>
+        <Text
+          testID="star-targets"
+          accessibilityLabel={`Three stars in ${limits.three} moves or fewer, two stars in ${limits.two} or fewer`}
+          style={styles.subText}
+          numberOfLines={1}
+        >
+          {`3★ ≤ ${limits.three} · 2★ ≤ ${limits.two}`}
+        </Text>
+        {best ? (
+          <Text
+            testID="field-best"
+            accessibilityLabel={`Your best: ${best.stars} of 3 stars in ${best.bestMoves} moves`}
+            style={styles.subText}
+            numberOfLines={1}
+          >
+            {`Best ${starGlyphs(best.stars)} in ${best.bestMoves}`}
+          </Text>
+        ) : null}
       </View>
 
       <GestureDetector gesture={pan}>
@@ -148,11 +221,7 @@ export function FieldScreen({ level, index }: Props) {
       </GestureDetector>
 
       <View style={styles.hintArea}>
-        {cleared ? (
-          <Text testID="field-cleared" style={[styles.hint, styles.cleared]}>
-            Field cleared
-          </Text>
-        ) : showFailed ? (
+        {cleared ? null : showFailed ? (
           <Text testID="field-failed" style={styles.hint}>
             <Text style={styles.failedTitle}>Flowers trampled</Text>
             {'\nUndo that run or restart the field.'}
@@ -192,6 +261,16 @@ export function FieldScreen({ level, index }: Props) {
           <Text style={styles.buttonText}>Restart</Text>
         </Pressable>
       </View>
+
+      {showCard ? (
+        <ClearedCard
+          outcome={outcome}
+          par={level.par}
+          onNext={onNext}
+          onOpenFields={onOpenFields}
+          style={[styles.card, { bottom: insets.bottom + 16 + BUTTON_HEIGHT + 10 }]}
+        />
+      ) : null}
     </View>
   );
 }
@@ -228,6 +307,15 @@ const styles = StyleSheet.create({
     letterSpacing: 1.1,
     paddingBottom: 4,
   },
+  fieldsButton: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    minHeight: 44,
+    gap: 6,
+  },
+  chevron: {
+    color: palette.butter,
+  },
   strip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -250,6 +338,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
   },
+  subStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: -6,
+  },
+  subText: {
+    color: palette.woolDim,
+    fontSize: 13,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+  },
   paddock: {
     flex: 1,
     alignItems: 'center',
@@ -265,13 +366,14 @@ const styles = StyleSheet.create({
     lineHeight: HINT_LINE,
     textAlign: 'center',
   },
-  cleared: {
-    color: palette.butter,
-    fontWeight: '700',
-  },
   failedTitle: {
     color: palette.butter,
     fontWeight: '700',
+  },
+  card: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
   },
   controls: {
     flexDirection: 'row',

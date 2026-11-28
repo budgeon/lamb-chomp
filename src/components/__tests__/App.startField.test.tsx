@@ -2,7 +2,8 @@
 /**
  * AC18: App reads the hidden `startField` launch argument (iOS `Settings`) once and
  * opens that field; without it, field 1. FieldScreen is replaced by a stub that
- * records the props App gives it.
+ * records the props App gives it. The save file is replaced by an empty
+ * in-memory store (nothing saved), so the launch rule also gives field 1.
  */
 import 'react-native-gesture-handler/jestSetup';
 
@@ -25,6 +26,14 @@ jest.mock('react-native/Libraries/Settings/NativeSettingsManager', () => ({
 jest.mock('react-native-safe-area-context', () =>
   jest.requireActual('react-native-safe-area-context/jest/mock').default,
 );
+
+// No save: an in-memory store that starts empty. `expo-file-system` never loads.
+jest.mock('../../save/progressFile', () => {
+  const { createProgressStore } = jest.requireActual('../../save/progressStore');
+  return {
+    progressStore: createProgressStore({ read: () => null, write: () => {}, backupCorrupt: () => {} }),
+  };
+});
 
 const mockRendered: { level: Level; index: number }[] = [];
 jest.mock('../FieldScreen', () => ({
