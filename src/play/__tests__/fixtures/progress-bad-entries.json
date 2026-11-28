@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "coins": 40,
+  "fields": {
+    "field-01": { "stars": 0, "badge": false, "bestMoves": 5 },
+    "field-02": { "stars": 4, "badge": false, "bestMoves": 8 },
+    "field-03": { "stars": "3", "badge": false, "bestMoves": 9 },
+    "field-04": { "stars": 2, "badge": true, "bestMoves": 12 },
+    "field-05": { "stars": 3, "badge": false, "bestMoves": 5.5 },
+    "field-06": { "stars": 3, "badge": true, "bestMoves": 9 },
+    "field-07": { "stars": 3, "badge": true, "bestMoves": 12 },
+    "field-08": "cleared",
+    "field-96": { "stars": 1, "badge": false, "bestMoves": 0 },
+    "field-97": { "stars": 3, "badge": "yes", "bestMoves": 7 },
+    "field-98": { "stars": 2, "badge": false },
+    "field-99": { "stars": 1, "badge": false, "bestMoves": 4 }
+  }
+}

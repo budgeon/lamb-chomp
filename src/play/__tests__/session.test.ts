@@ -468,6 +468,8 @@ describe('undo and restart property (AC6, AC12, H3)', () => {
               if (model.length === 0) expect(s).toBe(prev);
               model.length = 0;
               expect(s.game).toEqual(parseLevel(level));
+              expect(s.run).toBeNull();
+              expect(s.queued).toBeNull();
             } else if (s.game.moves > prev.game.moves) {
               model.push(prev.game);
             }

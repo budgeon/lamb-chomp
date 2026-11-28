@@ -13,7 +13,9 @@ if (errors.length === 0) {
   const total = curve.length;
   console.log(
     `Earn curve: ${total} levels, worlds ${ECONOMY.simulation.worldSizes.join('/')}, ` +
-      `star pattern ${ECONOMY.simulation.starPattern.join(',')}`,
+      `star pattern ${ECONOMY.simulation.starPattern.join(',')}, ` +
+      `badge pattern ${ECONOMY.simulation.badgePattern.map((b) => (b ? 'Y' : '-')).join(',')} ` +
+      `(+${ECONOMY.earn.shepherdsBestBonus} per badge)`,
   );
   console.log('world  levels    coins at world end');
   let start = 1;

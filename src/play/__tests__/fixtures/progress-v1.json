@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "coins": 50,
+  "fields": {
+    "field-01": {
+      "stars": 3,
+      "badge": true,
+      "bestMoves": 5
+    },
+    "field-02": {
+      "stars": 2,
+      "badge": false,
+      "bestMoves": 11
+    },
+    "field-03": {
+      "stars": 1,
+      "badge": false,
+      "bestMoves": 20
+    }
+  }
+}

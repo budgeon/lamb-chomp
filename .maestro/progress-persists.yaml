@@ -1,0 +1,102 @@
+# Journey: clear field 1, move on to field 2, quit, and come back to find the
+# progress saved. Covers progression-stars AC16 and AC10 on device; the AC17
+# upgrade check reuses steps 1-2.
+# The save is `progress.json` in the app's Documents folder. `clearState: true`
+# wipes it (checked on the iOS Simulator), so step 1 starts from no save and
+# the other flows are not affected by this one. Step 3 relaunches WITHOUT
+# clearState: that relaunch is the point of the flow.
+appId: com.lambchomp.app
+name: Progress persists across a relaunch
+tags:
+  - journey
+---
+# 1. Clean install: clear field 1 at par with U L D R U.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "app-root"
+    timeout: 20000
+- assertVisible: {id: "field-title", text: "Field 1"}
+- swipe:
+    from: {id: "paddock"}
+    direction: UP
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "1"}
+    timeout: 3000
+- swipe:
+    from: {id: "paddock"}
+    direction: LEFT
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "2"}
+    timeout: 3000
+- swipe:
+    from: {id: "paddock"}
+    direction: DOWN
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "3"}
+    timeout: 3000
+- swipe:
+    from: {id: "paddock"}
+    direction: RIGHT
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "4"}
+    timeout: 3000
+- swipe:
+    from: {id: "paddock"}
+    direction: UP
+- extendedWaitUntil:
+    visible: {id: "cleared-card"}
+    timeout: 3000
+- assertVisible: {id: "clear-stars", text: "3 of 3 stars"}
+- assertVisible: {id: "clear-badge"}
+- assertVisible: {id: "clear-coins", text: "+25 coins"}
+- takeScreenshot: persists-field1-cleared
+
+# 2. Next opens field 2 with a fresh session.
+- tapOn: {id: "next-field-button"}
+- extendedWaitUntil:
+    visible: {id: "field-title", text: "Field 2"}
+    timeout: 3000
+- assertVisible: {id: "moves-count", text: "0"}
+- assertNotVisible: {id: "cleared-card"}
+
+# 3. Quit and relaunch without clearState: the saved progress opens field 2.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "app-root"
+    timeout: 20000
+- assertVisible: {id: "field-title", text: "Field 2"}
+- assertVisible: {id: "fields-button", text: "Fields, Field 2"}
+- assertVisible: {id: "moves-count", text: "0"}
+- takeScreenshot: persists-relaunch
+
+# 4. The field list shows the saved result: tile 1 with 3 stars and the badge,
+#    tile 2 open, tile 3 locked, and the 25 coins earned.
+- tapOn: {id: "fields-button"}
+- extendedWaitUntil:
+    visible: {id: "field-list"}
+    timeout: 3000
+- assertVisible:
+    id: "field-tile-1"
+    text: "Field 1, 3 of 3 stars, shepherd's best"
+- assertVisible: {id: "field-tile-2", text: "Field 2, not cleared", enabled: true}
+- assertVisible: {id: "field-tile-3", text: "Field 3, locked", enabled: false}
+- assertVisible: {id: "coin-balance", text: "25 coins"}
+- assertVisible: {id: "field-list-back"}
+- takeScreenshot: fields-list
+
+# 5. Tapping tile 1 opens field 1 fresh, with the saved best shown.
+- tapOn: {id: "field-tile-1"}
+- extendedWaitUntil:
+    visible: {id: "field-title", text: "Field 1"}
+    timeout: 3000
+- assertNotVisible: {id: "field-list"}
+- assertVisible: {id: "moves-count", text: "0"}
+- assertVisible: {id: "sheep-0", text: "Sheep, column 4, row 3"}
+- assertVisible:
+    id: "field-best"
+    text: "Your best: 3 of 3 stars in 5 moves"
+- takeScreenshot: persists-field1-reopened

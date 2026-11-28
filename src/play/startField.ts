@@ -11,18 +11,26 @@
 
 /**
  * Turns the raw `startField` value (1-based field number) into a 0-based index
- * into LEVELS. An integer, or a string of digits, `n` in `1..count` gives `n - 1`.
- * Anything else (missing, not an integer, out of range) gives 0, i.e. field 1.
+ * into LEVELS, or null when there is no usable value. An integer, or a string of
+ * digits, `n` in `1..count` gives `n - 1`. Anything else (missing, not an
+ * integer, out of range) gives null, so the caller can apply its own launch rule.
  */
-export function parseStartField(raw: unknown, count: number): number {
+export function parseStartFieldOrNull(raw: unknown, count: number): number | null {
   let n: number;
   if (typeof raw === 'number') {
     n = raw;
   } else if (typeof raw === 'string' && /^\d+$/.test(raw)) {
     n = Number(raw);
   } else {
-    return 0;
+    return null;
   }
-  if (!Number.isInteger(n) || n < 1 || n > count) return 0;
+  if (!Number.isInteger(n) || n < 1 || n > count) return null;
   return n - 1;
+}
+
+/**
+ * As `parseStartFieldOrNull`, but anything unusable gives 0, i.e. field 1.
+ */
+export function parseStartField(raw: unknown, count: number): number {
+  return parseStartFieldOrNull(raw, count) ?? 0;
 }

@@ -1,0 +1,61 @@
+# Journey: open the field list over a field in progress, look around, and go
+# back to the same field unchanged. Covers progression-stars AC10 (navigation)
+# on device. Labels, locks and swipes on the list are also covered by Jest
+# (App.progress.test.tsx); this flow checks the real touch handling.
+appId: com.lambchomp.app
+name: Field list opens over a field and Back returns to it
+tags:
+  - journey
+---
+# 1. Clean install, one move on field 1.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "app-root"
+    timeout: 20000
+- assertVisible: {id: "field-title", text: "Field 1"}
+- swipe:
+    from: {id: "paddock"}
+    direction: UP
+- extendedWaitUntil:
+    visible: {id: "moves-count", text: "1"}
+    timeout: 3000
+- assertVisible: {id: "sheep-0", text: "Sheep, column 4, row 1"}
+
+# 2. The list: nothing cleared, so only field 1 is open, and no coins yet.
+- tapOn: {id: "fields-button"}
+- extendedWaitUntil:
+    visible: {id: "field-list"}
+    timeout: 3000
+- assertVisible: {id: "field-tile-1", text: "Field 1, not cleared", enabled: true}
+- assertVisible: {id: "field-tile-2", text: "Field 2, locked", enabled: false}
+- assertVisible: {id: "field-tile-8", text: "Field 8, locked", enabled: false}
+- assertVisible: {id: "coin-balance", text: "0 coins"}
+- takeScreenshot: field-list-fresh
+
+# 3. A swipe on the list does nothing: the list stays open (and step 4 shows
+#    the field underneath did not move).
+- swipe:
+    start: "20%,60%"
+    end: "80%,60%"
+    duration: 200
+- waitForAnimationToEnd
+- assertVisible: {id: "field-list"}
+- assertVisible: {id: "field-tile-1"}
+
+# A tap on a locked tile does nothing either.
+- tapOn: {id: "field-tile-2"}
+- assertVisible: {id: "field-list"}
+
+# 4. Back returns to field 1 with the move and the board unchanged.
+- tapOn: {id: "field-list-back"}
+- extendedWaitUntil:
+    notVisible: {id: "field-list"}
+    timeout: 3000
+- assertVisible: {id: "field-title", text: "Field 1"}
+- assertVisible: {id: "moves-count", text: "1"}
+- assertVisible: {id: "sheep-0", text: "Sheep, column 4, row 1"}
+- assertVisible: {id: "cell-3-1", text: "soil, column 4, row 2"}
+- assertVisible: {id: "undo-button", enabled: true}
+- takeScreenshot: field-list-back

@@ -6,15 +6,40 @@ import type { EconomyConfig, Stars } from './config';
 
 const CATEGORIES = new Set(['sheep-skin', 'fence', 'paddock']);
 
-/** Coins paid for a clear, given the player's previous best (0 = never cleared). */
+/** A field's saved best rating. `{ stars: 0, badge: false }` means never cleared. */
+export interface BestRating {
+  stars: 0 | Stars;
+  badge: boolean;
+}
+
+/** The best of a field that has never been cleared. */
+export const NO_BEST: BestRating = Object.freeze({ stars: 0, badge: false });
+
+/** Total coins a field has paid out once its best is `best`. */
+function value(earn: EconomyConfig['earn'], best: BestRating): number {
+  if (best.stars === 0) return 0;
+  return earn.firstClearBase + earn.starBonus[best.stars] + (best.badge ? earn.shepherdsBestBonus : 0);
+}
+
+/** The better of two ratings: more stars wins; at equal stars a badge from either counts. */
+function mergeBest(a: BestRating, b: BestRating): BestRating {
+  if (a.stars !== b.stars) return a.stars > b.stars ? a : b;
+  return { stars: a.stars, badge: a.badge || b.badge };
+}
+
+/**
+ * Coins paid for a clear rated `next`, given the field's previous best.
+ * Pays only the increase in the field's value: a first clear pays base + star
+ * bonus (+ badge bonus), a replay pays only a rating upgrade, and the total
+ * over any sequence of clears equals the value of the final best. Never
+ * negative.
+ */
 export function coinsForClear(
   earn: EconomyConfig['earn'],
-  previousBest: 0 | Stars,
-  stars: Stars,
+  previous: BestRating,
+  next: { stars: Stars; badge: boolean },
 ): number {
-  if (previousBest === 0) return earn.firstClearBase + earn.starBonus[stars];
-  if (stars <= previousBest) return 0;
-  return earn.starBonus[stars] - earn.starBonus[previousBest];
+  return value(earn, mergeBest(previous, next)) - value(earn, previous);
 }
 
 export interface EarnPoint {
@@ -25,14 +50,14 @@ export interface EarnPoint {
 
 /** Cumulative coins for a typical player clearing each level once, in order. */
 export function simulateEarnCurve(config: EconomyConfig): EarnPoint[] {
-  const { worldSizes, starPattern } = config.simulation;
+  const { worldSizes, starPattern, badgePattern } = config.simulation;
   const curve: EarnPoint[] = [];
   let coins = 0;
   let level = 0;
   worldSizes.forEach((size, w) => {
     for (let i = 0; i < size; i++) {
-      const stars = starPattern[level % starPattern.length];
-      coins += coinsForClear(config.earn, 0, stars);
+      const k = level % starPattern.length;
+      coins += coinsForClear(config.earn, NO_BEST, { stars: starPattern[k], badge: badgePattern[k] === true });
       level++;
       if (i === size - 1) coins += config.earn.worldCompleteBonus;
       curve.push({ level, world: w + 1, coins });
@@ -63,6 +88,7 @@ export function checkEconomy(config: EconomyConfig): string[] {
   if (!(earn.starBonus[1] <= earn.starBonus[2] && earn.starBonus[2] <= earn.starBonus[3])) {
     errors.push(`earn.starBonus must not decrease with more stars`);
   }
+  if (!isNonNegInt(earn.shepherdsBestBonus)) errors.push(`earn.shepherdsBestBonus must be a non-negative integer`);
   if (earn.replay !== 'star-upgrade-only') errors.push(`earn.replay must be 'star-upgrade-only'`);
 
   // Catalog
@@ -92,11 +118,26 @@ export function checkEconomy(config: EconomyConfig): string[] {
   }
 
   // Simulation profile sanity (D2)
-  const { worldSizes, starPattern } = config.simulation;
+  const { worldSizes, starPattern, badgePattern } = config.simulation;
   worldSizes.forEach((n, i) => {
     if (!Number.isInteger(n) || n < 15 || n > 20) errors.push(`world ${i + 1} size ${n} is outside 15-20 (D2)`);
   });
   if (starPattern.length === 0) errors.push('simulation.starPattern is empty');
+  if (!Array.isArray(badgePattern) || badgePattern.length !== starPattern.length) {
+    errors.push(
+      `simulation.badgePattern length ${Array.isArray(badgePattern) ? badgePattern.length : 'n/a'} ` +
+        `must equal simulation.starPattern length ${starPattern.length}`,
+    );
+  } else {
+    badgePattern.forEach((b, i) => {
+      if (typeof b !== 'boolean') errors.push(`simulation.badgePattern[${i}] must be a boolean`);
+      else if (b && starPattern[i] !== 3) {
+        errors.push(
+          `simulation.badgePattern[${i}] is a badge on a ${starPattern[i]}-star entry; the badge needs 3 stars (D7)`,
+        );
+      }
+    });
+  }
   if (errors.length) return errors; // curve maths below assumes valid inputs
 
   // Affordability

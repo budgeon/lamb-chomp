@@ -24,6 +24,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { LEVELS } from '../../game';
 import type { Dir, Level } from '../../game';
+import type { ClearOutcome } from '../../play/progress';
 import type { Run } from '../../play/session';
 import { palette } from '../../theme/palette';
 import { FieldScreen } from '../FieldScreen';
@@ -171,12 +172,23 @@ function expectDisabled(id: string, disabled: boolean) {
   expect(config.disabled === true).toBe(disabled);
 }
 
+/** Mount-only prop: these tests never clear the field. */
+const stubOnClear = (moves: number): ClearOutcome => {
+  throw new Error(`unexpected clear in ${moves} moves`);
+};
+
 function mount(level: Level, index: number) {
   act(() => {
     root.render(
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider initialMetrics={metrics}>
-          <FieldScreen level={level} index={index} />
+          <FieldScreen
+            level={level}
+            index={index}
+            best={undefined}
+            onClear={stubOnClear}
+            onOpenFields={() => {}}
+          />
         </SafeAreaProvider>
       </GestureHandlerRootView>,
     );

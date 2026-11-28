@@ -1,0 +1,109 @@
+# Journey: clear field 7 (7 rows, the tallest board) at par, then Next opens
+# field 8 fresh. Covers progression-stars AC23 (7-row layout with the targets
+# line and the cleared card) and AC7 on device.
+# Field 7 is opened with the hidden `startField` launch argument (it is locked
+# on a clean install). field-07 (6 x 7, par 12, single sheep at column 3, row 1):
+#   .mSfgG
+#   gggGgG
+#   gg..g#
+#   gg..g#
+#   ggfmg.
+#   ggggg#
+#   g#.#..
+# The par solution L D R U R D L R U D L D ends at column 1, row 7.
+appId: com.lambchomp.app
+name: Field 7 cleared at par, Next opens field 8
+tags:
+  - journey
+---
+# 1. Field 7 opens: targets for par 12, all four corners on screen.
+- launchApp:
+    clearState: true
+    arguments:
+      startField: 7
+- extendedWaitUntil:
+    visible:
+      id: "app-root"
+    timeout: 20000
+- assertVisible: {id: "field-title", text: "Field 7"}
+- assertVisible: {id: "par-value", text: "12"}
+- assertVisible:
+    id: "star-targets"
+    text: "Three stars in 14 moves or fewer, two stars in 17 or fewer"
+- assertVisible: {id: "moves-count", text: "0"}
+- assertVisible: {id: "sheep-0", text: "Sheep, column 3, row 1"}
+- assertVisible: {id: "cell-0-0"}
+- assertVisible: {id: "cell-5-0"}
+- assertVisible: {id: "cell-0-6"}
+- assertVisible: {id: "cell-5-6"}
+- assertVisible: {id: "controls"}
+- takeScreenshot: field7-start
+
+# 2. Play the par solution L D R U R D L R U D L D.
+- swipe: {from: {id: "paddock"}, direction: LEFT}
+- extendedWaitUntil: {visible: {id: "moves-count", text: "1"}, timeout: 3000}
+- swipe: {from: {id: "paddock"}, direction: DOWN}
+- extendedWaitUntil: {visible: {id: "moves-count", text: "2"}, timeout: 3000}
+- swipe: {from: {id: "paddock"}, direction: RIGHT}
+- extendedWaitUntil: {visible: {id: "moves-count", text: "3"}, timeout: 3000}
+- swipe: {from: {id: "paddock"}, direction: UP}
+- extendedWaitUntil: {visible: {id: "moves-count", text: "4"}, timeout: 3000}
+- assertVisible: {id: "sheep-0", text: "Sheep, column 5, row 1"}
+- swipe: {from: {id: "paddock"}, direction: RIGHT}
+- extendedWaitUntil: {visible: {id: "moves-count", text: "5"}, timeout: 3000}
+- swipe: {from: {id: "paddock"}, direction: DOWN}
+- extendedWaitUntil: {visible: {id: "moves-count", text: "6"}, timeout: 3000}
+- swipe: {from: {id: "paddock"}, direction: LEFT}
+- extendedWaitUntil: {visible: {id: "moves-count", text: "7"}, timeout: 3000}
+- swipe: {from: {id: "paddock"}, direction: RIGHT}
+- extendedWaitUntil: {visible: {id: "moves-count", text: "8"}, timeout: 3000}
+- swipe: {from: {id: "paddock"}, direction: UP}
+- extendedWaitUntil: {visible: {id: "moves-count", text: "9"}, timeout: 3000}
+- swipe: {from: {id: "paddock"}, direction: DOWN}
+- extendedWaitUntil: {visible: {id: "moves-count", text: "10"}, timeout: 3000}
+- swipe: {from: {id: "paddock"}, direction: LEFT}
+- extendedWaitUntil: {visible: {id: "moves-count", text: "11"}, timeout: 3000}
+- swipe: {from: {id: "paddock"}, direction: DOWN}
+- extendedWaitUntil: {visible: {id: "moves-count", text: "12"}, timeout: 3000}
+
+# The cleared card: 3 stars, badge, +25 coins. The corners stay in the tree
+# under the card (layout C2), and the controls stay on screen.
+- extendedWaitUntil:
+    visible: {id: "cleared-card"}
+    timeout: 3000
+- assertVisible: {id: "field-cleared", text: "Field cleared"}
+- assertVisible: {id: "clear-stars", text: "3 of 3 stars"}
+- assertVisible: {id: "clear-badge"}
+- assertVisible: {id: "clear-coins", text: "+25 coins"}
+- assertNotVisible: {text: "grass, .*"}
+- assertNotVisible: {text: "tall grass, .*"}
+- assertVisible: {id: "sheep-0", text: "Sheep, column 1, row 7"}
+- assertVisible: {id: "cell-0-0"}
+- assertVisible: {id: "cell-5-0"}
+- assertVisible: {id: "cell-0-6"}
+- assertVisible: {id: "cell-5-6"}
+- assertVisible: {id: "next-field-button"}
+- assertVisible: {id: "clear-fields-button"}
+- assertVisible: {id: "controls"}
+- takeScreenshot: field7-cleared
+
+# 3. Next opens field 8 fresh: moves 0, the starting layout, targets for par 13.
+- tapOn: {id: "next-field-button"}
+- extendedWaitUntil:
+    visible: {id: "field-title", text: "Field 8"}
+    timeout: 3000
+- assertNotVisible: {id: "cleared-card"}
+- assertVisible: {id: "moves-count", text: "0"}
+- assertVisible: {id: "par-value", text: "13"}
+- assertVisible:
+    id: "star-targets"
+    text: "Three stars in 15 moves or fewer, two stars in 19 or fewer"
+- assertVisible: {id: "sheep-0", text: "Sheep, column 5, row 3"}
+- assertVisible: {id: "sheep-1", text: "Sheep, column 5, row 4"}
+- assertVisible: {id: "cell-0-0"}
+- assertVisible: {id: "cell-5-0"}
+- assertVisible: {id: "cell-0-6"}
+- assertVisible: {id: "cell-5-6"}
+- assertVisible: {id: "undo-button", enabled: false}
+- assertVisible: {id: "controls"}
+- takeScreenshot: field8-start

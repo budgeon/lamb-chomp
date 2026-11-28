@@ -19,7 +19,7 @@ Newest first. Each entry says what was decided, why, and what is still open.
 
     For example, best 5: 3★ at 6, 2★ at 7–8. Best 9: 3★ at 10–11, 2★ at 12–13. Best 14: 3★ at 15–17, 2★ at 18–20.
 
-    Compute the margins in integers, as `ceil(15 × best / 100)` and `ceil(40 × best / 100)`. In floating point `0.15 × 20` is `3.0000000000000004`, which would round up to 4 instead of 3.
+    Compute the margins in integers, as `ceil(15 × best / 100)` and `ceil(40 × best / 100)`. For 15% and 40% the floating-point form happens to give the same result for every best up to 100,000, but other percentages do not: `0.07 × 100` is `7.000000000000001`, which would round up to 8. Integer maths keeps the result independent of float rounding if the percentages are ever tuned. (Corrected 27 Nov 2026: an earlier version of this entry wrongly said `0.15 × 20` was `3.0000000000000004`.)
   - **Badge.** The badge (for example a golden crook) is separate from the stars, so the familiar 3-star scale stays. The best result per field is kept: its star count, and whether the badge was earned.
   - **Undo and hints are free.** The rating depends only on the final move count. Undo restores the move count, and a field cleared with a solver hint can still earn 3 stars and the badge.
   - **Coins.** Reaching the shepherd's best pays a small extra bonus on top of the 3-star bonus, once per field. A replay that first reaches it pays the bonus as an upgrade, in line with `replay: 'star-upgrade-only'`.

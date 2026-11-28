@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { CHECK_SOLUTIONS, loadPrototype, parseSolution } from '../__testutils__/prototype';
-import { LEVELS, grassRemaining, isCleared, parseLevel, slide } from '../index';
+import { LEVELS, grassRemaining, isCleared, parseLevel, rateClear, slide } from '../index';
 
 describe('golden replay of tools/check.js solutions', () => {
   it('uses the same solutions as tools/check.js', () => {
@@ -44,4 +44,12 @@ describe('golden replay of tools/check.js solutions', () => {
     expect(grassRemaining(s)).toBe(0);
     expect(isCleared(s)).toBe(true);
   });
+
+  it.each(LEVELS.map((l, i) => [l.id, i] as const))(
+    '%s par solution rates 3 stars and the shepherd\'s best badge',
+    (_id, i) => {
+      const moves = parseSolution(CHECK_SOLUTIONS[i]);
+      expect(rateClear(LEVELS[i].par, moves.length)).toEqual({ stars: 3, badge: true });
+    },
+  );
 });

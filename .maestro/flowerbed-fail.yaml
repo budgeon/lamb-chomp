@@ -26,6 +26,10 @@ tags:
     timeout: 20000
 - assertVisible: {id: "field-title", text: "Field 5"}
 - assertVisible: {id: "par-value", text: "10"}
+# Progression AC5 (M): the D7 targets for par 10 (label text, see field-1.yaml).
+- assertVisible:
+    id: "star-targets"
+    text: "Three stars in 12 moves or fewer, two stars in 14 or fewer"
 - assertVisible: {id: "moves-count", text: "0"}
 - assertVisible: {id: "sheep-0", text: "Sheep, column 5, row 6"}
 - assertVisible: {id: "cell-5-4", text: "flowerbed, column 6, row 5"}
